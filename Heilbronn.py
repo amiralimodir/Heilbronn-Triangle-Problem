@@ -2,7 +2,6 @@ import gurobipy as gp
 from gurobipy import Model,quicksum,GRB
 import matplotlib.pyplot as plt
 import time
-import itertools
 
 def heilbronn_triangle(n):
     model = gp.Model("Heilbronn Triangle")
@@ -15,34 +14,46 @@ def heilbronn_triangle(n):
 
 
     model.update()
-    model.addConstr(x[0] == 0 , name = 'one point on first edge')
-    model.addConstr(x[1] == 1 , name = 'one point on second edge')
-    model.addConstr(y[2] == 0 , name = 'one point on third edge')
-    model.addConstr(y[3] == 1 , name = 'one point on forth edge')
+    model.addConstr(x[0] == 0 , name = 'one point on x=0')
+    model.addConstr(x[1] == 1 , name = 'one point on y=0')
+    model.addConstr(y[2] == 0 , name = 'one point on x=1')
+    model.addConstr(y[3] == 1 , name = 'one point on y=1')
 
 
     for i in range(n):
         for j in range(i + 1, n):
             for k in range(j + 1, n):
+                # (x[i] * (y[j] - y[k]) + x[j] * (y[k] - y[i]) + x[k] * (y[i] - y[j])) != 0
                 model.addConstr(S[i, j, k] == 0.5 * (x[i] * (y[j] - y[k]) + x[j] * (y[k] - y[i]) + x[k] * (y[i] - y[j])), name=f"S_constr_{i}_{j}_{k}")
                 model.addConstr((1 - b[i, j, k]) + S[i, j, k] >= z, name=f"linearize1_{i}_{j}_{k}")
                 model.addConstr(b[i, j, k] - S[i, j, k] >= z, name=f"linearize2_{i}_{j}_{k}")
+                model.addConstr(z >= 1e-10 , name= 'Not in a line')
+
+    model.addConstr(1 <=quicksum(x) , name = 'lb x')
+    model.addConstr(quicksum(x) <= n-1 , name= 'ub x')
+    model.addConstr( 1 <= quicksum(y), name='lb y')
+    model.addConstr(quicksum(y) <= n-1, name='ub y')
 
 
 
-    if n%2 == 0:
-        model.addConstr(n/4 <=quicksum(x) , name = 'lb x')
-        model.addConstr(quicksum(x) <= 3*n/4 , name= 'ub x')
-        model.addConstr( n/4 <= quicksum(y), name='lb y')
-        model.addConstr(quicksum(y) <= 3*n/4, name='ub y')
-    else:
-        model.addConstr((n-1)/4 <=quicksum(x) , name = 'lb x')
-        model.addConstr(quicksum(x) <= (3*n+1)/4 , name= 'ub x')
-        model.addConstr( (n-1)/4 <= quicksum(y), name='lb y')
-        model.addConstr(quicksum(y) <= (3*n+1)/4, name='ub y')
-
+    # if n%2 == 0:
+    #     model.addConstr(n/4 <=quicksum(x) , name = 'lb x')
+    #     model.addConstr(quicksum(x) <= 3*n/4 , name= 'ub x')
+    #     model.addConstr( n/4 <= quicksum(y), name='lb y')
+    #     model.addConstr(quicksum(y) <= 3*n/4, name='ub y')
+    # else:
+    #     model.addConstr((n-1)/4 <=quicksum(x) , name = 'lb x')
+    #     model.addConstr(quicksum(x) <= (3*n+1)/4 , name= 'ub x')
+    #     model.addConstr( (n-1)/4 <= quicksum(y), name='lb y')
+    #     model.addConstr(quicksum(y) <= (3*n+1)/4, name='ub y')
 
     model.setObjective(z, GRB.MAXIMIZE)
+    
+    # model.setParam('TimeLimit', 100)
+    # model.setParam('MIPGap', 1e-5)
+    # model.setParam('Heuristics', 0.5)
+    # model.setParam('MIPFocus', 1)
+    
     start_time= time.time()
     model.optimize()
     optimize_time= time.time() - start_time
@@ -110,4 +121,3 @@ print('y = ',optimal_y)
 print('time = ',optimize_time)
 if optimal_x is not None and optimal_y is not None:
     plot_solution(optimal_z, optimal_x, optimal_y)
-
