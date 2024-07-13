@@ -1,6 +1,9 @@
 import gurobipy as gp
 from gurobipy import Model,quicksum,GRB
 import matplotlib.pyplot as plt
+import time
+import itertools
+
 def heilbronn_triangle(n):
     model = gp.Model("Heilbronn Triangle")
 
@@ -40,15 +43,16 @@ def heilbronn_triangle(n):
 
 
     model.setObjective(z, GRB.MAXIMIZE)
-
+    start_time= time.time()
     model.optimize()
-
+    optimize_time= time.time() - start_time
+    
     if model.status == GRB.OPTIMAL:
         print(f"Optimal value: {z.X}")
         optimal_z = z.X
         optimal_x = [x[i].X for i in range(n)]
         optimal_y = [y[i].X for i in range(n)]
-        return optimal_z, optimal_x, optimal_y
+        return optimal_z, optimal_x, optimal_y, optimize_time
     else:
         print("No optimal solution found")
         return None, None
@@ -100,9 +104,10 @@ def plot_solution(optimal_z, optimal_x, optimal_y):
     plt.show()
 
 n = int(input())
-optimal_z ,optimal_x, optimal_y = heilbronn_triangle(n)
-print(optimal_x)
-print(optimal_y)
+optimal_z ,optimal_x, optimal_y, optimize_time = heilbronn_triangle(n)
+print('x = ',optimal_x)
+print('y = ',optimal_y)
+print('time = ',optimize_time)
 if optimal_x is not None and optimal_y is not None:
     plot_solution(optimal_z, optimal_x, optimal_y)
 
