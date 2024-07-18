@@ -2,6 +2,7 @@ import gurobipy as gp
 from gurobipy import Model,quicksum,GRB
 import matplotlib.pyplot as plt
 import time
+import math
 
 def heilbronn_triangle(n):
     model = gp.Model("Heilbronn Triangle")
@@ -20,21 +21,17 @@ def heilbronn_triangle(n):
     model.addConstr(y[2] == 0 , name = 'one point on x=1')
     model.addConstr(y[3] == 1 , name = 'one point on y=1')
 
-
     for i in range(n):
         for j in range(i + 1, n):
             model.addConstr(w[i,j] == x[i]*y[j], name='define wij')
             model.addConstr(w[j,i] == x[j]*y[i], name='define wji')
             for k in range(j + 1, n):
-                model.addConstr(w[i,k] == x[i]*y[k], name='define wik')
-                model.addConstr(w[j,k] == x[j]*y[k], name='define wjk')
-                model.addConstr(w[k,i] == x[k]*y[i], name='define wki')
-                model.addConstr(w[k,j] == x[k]*y[j], name='define wkj')
                 model.addConstr(S[i, j, k] == 0.5 * (w[i,j]-w[i,k] + w[j,k]-w[j,i] + w[k,i]-w[k,j]), name=f"S_constr_{i}_{j}_{k}")
                 model.addConstr((1 - b[i, j, k]) + S[i, j, k] >= z, name=f"linearize1_{i}_{j}_{k}")
                 model.addConstr(b[i, j, k] - S[i, j, k] >= z, name=f"linearize2_{i}_{j}_{k}")
-                model.addConstr(z >= 0.00877927928656197 , name='Lower band z')
-                model.addConstr(z <= 0.125 , name= 'Upper band z')
+                model.addConstr(z >= 1e-10 , name= 'Not in a line')
+                # model.addConstr(z >= b[i,j,k] * S[i,j,k] , name='Lower band z')
+                model.addConstr(z <= 1/(math.ceil(n/2)-1) , name= 'Upper band z')
 
     model.addConstr(1 <=quicksum(x) , name = 'lb x')
     model.addConstr(quicksum(x) <= n-1 , name= 'ub x')
