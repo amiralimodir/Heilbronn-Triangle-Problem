@@ -31,7 +31,7 @@ def heilbronn_triangle(n):
                 model.addConstr(b[i, j, k] - S[i, j, k] >= z, name=f"linearize2_{i}_{j}_{k}")
                 model.addConstr(z >= 1e-10 , name= 'Not in a line')
                 # model.addConstr(z >= b[i,j,k] * S[i,j,k] , name='Lower band z')
-                model.addConstr(z <= 1/(math.ceil(n/2)-1) , name= 'Upper band for z')
+                model.addConstr(z <= 1/2*(math.ceil(n/2)-1) , name= 'Upper band for z')
 
     model.addConstr(1 <=quicksum(x) , name = 'lb x')
     model.addConstr(quicksum(x) <= n-1 , name= 'ub x')
