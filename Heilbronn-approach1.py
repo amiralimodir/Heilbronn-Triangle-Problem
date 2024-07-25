@@ -2,6 +2,7 @@ import gurobipy as gp
 from gurobipy import Model,quicksum,GRB
 import matplotlib.pyplot as plt
 import time
+import math
 
 def heilbronn_triangle(n):
     model = gp.Model("Heilbronn Triangle")
@@ -27,6 +28,7 @@ def heilbronn_triangle(n):
                 model.addConstr((1 - b[i, j, k]) + S[i, j, k] >= z, name=f"linearize1_{i}_{j}_{k}")
                 model.addConstr(b[i, j, k] - S[i, j, k] >= z, name=f"linearize2_{i}_{j}_{k}")
                 model.addConstr(z >= 1e-10 , name= 'Not in a line')
+                model.addConstr(z <= 1/(math.ceil(n/2)-1) , name= 'Upper band z')
 
     model.addConstr(1 <=quicksum(x) , name = 'lb x')
     model.addConstr(quicksum(x) <= n-1 , name= 'ub x')
