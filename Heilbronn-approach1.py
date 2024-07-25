@@ -11,7 +11,7 @@ def heilbronn_triangle(n):
     y = model.addVars(n, vtype=GRB.CONTINUOUS, name="y", lb=0, ub=1)
     S = model.addVars(n, n, n, vtype=GRB.CONTINUOUS, name="S", lb=-0.5, ub=0.5)
     b = model.addVars(n, n, n, vtype=GRB.BINARY, name="b")
-    z = model.addVar(vtype=GRB.CONTINUOUS, name="z", lb=0, ub=0.5)
+    z = model.addVar(vtype=GRB.CONTINUOUS, name="z", lb=math.log(n)/n**2, ub=n**(-1*(8/7)-(1/2000)))
 
 
     model.update()
@@ -20,15 +20,17 @@ def heilbronn_triangle(n):
     model.addConstr(y[2] == 0 , name = 'one point on x=1')
     model.addConstr(y[3] == 1 , name = 'one point on y=1')
 
-
+    u=n**(-1*(8/7)-(1/2000))
     for i in range(n):
         for j in range(i + 1, n):
             for k in range(j + 1, n):
                 model.addConstr(S[i, j, k] == 0.5 * (x[i] * (y[j] - y[k]) + x[j] * (y[k] - y[i]) + x[k] * (y[i] - y[j])), name=f"S_constr_{i}_{j}_{k}")
-                model.addConstr((1 - b[i, j, k]) + S[i, j, k] >= z, name=f"linearize1_{i}_{j}_{k}")
-                model.addConstr(b[i, j, k] - S[i, j, k] >= z, name=f"linearize2_{i}_{j}_{k}")
+                model.addConstr((1 - b[i, j, k])*(u+0.5) + S[i, j, k] >= z, name=f"linearize1_{i}_{j}_{k}")
+                model.addConstr(b[i, j, k]*(u+0.5) - S[i, j, k] >= z, name=f"linearize2_{i}_{j}_{k}")
+                model.addConstr(S[i, j, k] <= 0.5*b[i,j,k] , name=f"upper")
+                model.addConstr(S[i, j, k] >= 0.5*(b[i,j,k]-1) , name=f"lower")
                 model.addConstr(z >= 1e-10 , name= 'Not in a line')
-                model.addConstr(z <= 1/(math.ceil(n/2)-1) , name= 'Upper band z')
+                #model.addConstr(z <= 1/1/2*(math.ceil(n/2)-1) , name= 'Upper band z')
 
     model.addConstr(1 <=quicksum(x) , name = 'lb x')
     model.addConstr(quicksum(x) <= n-1 , name= 'ub x')
