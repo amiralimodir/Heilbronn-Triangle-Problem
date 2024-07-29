@@ -1,0 +1,19 @@
+point_in_square = model.addVars(n, n, n, vtype=GRB.BINARY, name="point_in_square")
+
+for k in range(n):
+    model.addConstr(quicksum(point_in_square[i, j, k] for i in range(n) for j in range(n)) == 1, f"Point_{k}_assignment")
+
+for i in range(n):
+    for j in range(n):
+        model.addConstr(quicksum(point_in_square[i, j, k] for k in range(n)) <= 1, f"Square_{i}_{j}_capacity")
+
+
+grid_size = 1.0 / n
+
+for k in range(n):
+    for i in range(n):
+        for j in range(n):
+            model.addConstr(point_in_square[i, j, k] * (x[k] - i * grid_size) >= 0, f"link_x_lb_{i}_{j}_{k}")
+            model.addConstr(point_in_square[i, j, k] * (x[k] - (i + 1) * grid_size) <= 0, f"link_x_ub_{i}_{j}_{k}")
+            model.addConstr(point_in_square[i, j, k] * (y[k] - j * grid_size) >= 0, f"link_y_lb_{i}_{j}_{k}")
+            model.addConstr(point_in_square[i, j, k] * (y[k] - (j + 1) * grid_size) <= 0, f"link_y_ub_{i}_{j}_{k}")
