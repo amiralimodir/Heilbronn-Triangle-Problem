@@ -17,8 +17,7 @@ def heilbronn_triangle(n):
     b = model.addVars(n, n, n, vtype=GRB.BINARY, name="b")
     z = model.addVar(vtype=GRB.CONTINUOUS, name="z", lb=math.log(n)/n**2, ub=n**(-1*(8/7)-(1/2000)))
     point_in_square = model.addVars(n, n, n, vtype=GRB.BINARY, name="point_in_square")
-
-
+    
     model.update()
     # model.addConstr(x[2] == 0 , name = 'one point on x=0')
     # model.addConstr(x[1] == 1 , name = 'one point on y=0')
@@ -83,7 +82,9 @@ def heilbronn_triangle(n):
     model.setParam('IntFeasTol', 1e-6)
     
     start_time= time.time()
+    
     model.optimize()
+
     optimize_time= time.time() - start_time
     
     if model.status == GRB.OPTIMAL:
