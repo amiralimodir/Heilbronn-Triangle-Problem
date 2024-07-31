@@ -77,10 +77,10 @@ def heilbronn_triangle(n):
 
     model.setObjective(z, GRB.MAXIMIZE)
     
-    # model.setParam('TimeLimit', 100)
-    # model.setParam('MIPGap', 1e-5)
-    # model.setParam('Heuristics', 0.5)
-    # model.setParam('MIPFocus', 1)
+    model.setParam('MIPGap', 1e-6)
+    model.setParam('MIPGapAbs', 0.01)
+    model.setParam('FeasibilityTol', 1e-6)
+    model.setParam('IntFeasTol', 1e-6)
     
     start_time= time.time()
     model.optimize()
