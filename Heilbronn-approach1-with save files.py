@@ -20,10 +20,12 @@ def heilbronn_triangle(n):
 
 
     model.update()
-    model.addConstr(x[0] == 0 , name = 'one point on x=0')
-    model.addConstr(x[1] == 1 , name = 'one point on y=0')
-    model.addConstr(y[2] == 0 , name = 'one point on x=1')
-    model.addConstr(y[3] == 1 , name = 'one point on y=1')
+    # model.addConstr(x[2] == 0 , name = 'one point on x=0')
+    # model.addConstr(x[1] == 1 , name = 'one point on y=0')
+    model.addConstr(y[0] == 0 , name = 'one point on y=0')
+    for i in range(n-1):
+        model.addConstr(y[i] <= y[i+1] , name = 'Sort points')
+    model.addConstr(y[n-1] == 1 , name = 'one point on y=1')
     
     u=n**(-1*(8/7)-(1/2000))
     for i in range(n):
@@ -34,6 +36,8 @@ def heilbronn_triangle(n):
                 model.addConstr(b[i, j, k]*(u+0.5) - S[i, j, k] >= z, name=f"linearize2_{i}_{j}_{k}")
                 model.addConstr(S[i, j, k] <= 0.5*b[i,j,k] , name="upper")
                 model.addConstr(S[i, j, k] >= 0.5*(b[i,j,k]-1) , name="lower")
+    
+    
     
     for i in range(n):
         for j in range(n):
