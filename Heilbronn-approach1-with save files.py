@@ -6,7 +6,7 @@ import math
 
 result=[]
 
-    
+
 
 def heilbronn_triangle(n):
     model = gp.Model("Heilbronn Triangle")
@@ -19,14 +19,18 @@ def heilbronn_triangle(n):
     point_in_square = model.addVars(n, n, n, vtype=GRB.BINARY, name="point_in_square")
     
     model.update()
+    
     # model.addConstr(x[2] == 0 , name = 'one point on x=0')
     # model.addConstr(x[1] == 1 , name = 'one point on y=0')
+    
     model.addConstr(y[0] == 0 , name = 'one point on y=0')
-    for i in range(n-1):
-        model.addConstr(y[i] <= y[i+1] , name = 'Sort points')
     model.addConstr(y[n-1] == 1 , name = 'one point on y=1')
     
-    u=n**(-1*(8/7)-(1/2000))
+    for i in range(n-1):
+        model.addConstr(y[i] <= y[i+1] , name = 'Sort points')
+    
+    u=n**(-1*(8/7)-(1/2000)) #must be changed according to each number of points
+    
     for i in range(n):
         for j in range(i + 1, n):
             for k in range(j + 1, n):
@@ -36,13 +40,6 @@ def heilbronn_triangle(n):
                 model.addConstr(S[i, j, k] <= 0.5*b[i,j,k] , name="upper")
                 model.addConstr(S[i, j, k] >= 0.5*(b[i,j,k]-1) , name="lower")
     
-    
-    
-    for i in range(n):
-        for j in range(n):
-            model.addConstr(quicksum(point_in_square[i, j, k] for k in range(n)) <= 1, f"Square_{i}_{j}_capacity")
-
-
     grid_size = 1.0 / n
 
     for k in range(n):
@@ -53,26 +50,14 @@ def heilbronn_triangle(n):
                 model.addConstr(point_in_square[i, j, k] * (y[k] - j * grid_size) >= 0, f"link_y_lb_{i}_{j}_{k}")
                 model.addConstr(point_in_square[i, j, k] * (y[k] - (j + 1) * grid_size) <= 0, f"link_y_ub_{i}_{j}_{k}")
 
-
-            
+    for i in range(n):
+        for j in range(n):
+            model.addConstr(quicksum(point_in_square[i, j, k] for k in range(n)) <= 1, f"Square_{i}_{j}_capacity")
 
     model.addConstr(1 <=quicksum(x) , name = 'lb x')
     model.addConstr(quicksum(x) <= n-1 , name= 'ub x')
     model.addConstr( 1 <= quicksum(y), name='lb y')
     model.addConstr(quicksum(y) <= n-1, name='ub y')
-
-
-
-    # if n%2 == 0:
-    #     model.addConstr(n/4 <=quicksum(x) , name = 'lb x')
-    #     model.addConstr(quicksum(x) <= 3*n/4 , name= 'ub x')
-    #     model.addConstr( n/4 <= quicksum(y), name='lb y')
-    #     model.addConstr(quicksum(y) <= 3*n/4, name='ub y')
-    # else:
-    #     model.addConstr((n-1)/4 <=quicksum(x) , name = 'lb x')
-    #     model.addConstr(quicksum(x) <= (3*n+1)/4 , name= 'ub x')
-    #     model.addConstr( (n-1)/4 <= quicksum(y), name='lb y')
-    #     model.addConstr(quicksum(y) <= (3*n+1)/4, name='ub y')
 
     model.setObjective(z, GRB.MAXIMIZE)
     
