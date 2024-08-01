@@ -15,7 +15,7 @@ def heilbronn_triangle(n):
     y = model.addVars(n, vtype=GRB.CONTINUOUS, name="y", lb=0, ub=1)
     S = model.addVars(n, n, n, vtype=GRB.CONTINUOUS, name="S", lb=-0.5, ub=0.5)
     b = model.addVars(n, n, n, vtype=GRB.BINARY, name="b")
-    z = model.addVar(vtype=GRB.CONTINUOUS, name="z", lb=math.log(n)/n**2, ub=n**(-1*(8/7)-(1/2000)))
+    z = model.addVar(vtype=GRB.CONTINUOUS, name="z", lb=0.07184691488468573, ub=n**(-1*(8/7)-(1/2000)))
     point_in_square = model.addVars(n, n, n, vtype=GRB.BINARY, name="point_in_square")
     
     model.update()
