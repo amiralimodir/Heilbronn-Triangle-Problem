@@ -6,7 +6,7 @@ import math
 
 result=[]
 
-
+    
 
 def heilbronn_triangle(n):
     model = gp.Model("Heilbronn Triangle")
@@ -19,15 +19,62 @@ def heilbronn_triangle(n):
     point_in_square = model.addVars(n, n, n, vtype=GRB.BINARY, name="point_in_square")
     
     model.update()
-    # model.addConstr(x[2] == 0 , name = 'one point on x=0')
-    # model.addConstr(x[1] == 1 , name = 'one point on y=0')
+    #model.addConstr(x[2] == 0 , name = 'one point on x=0')
+    #model.addConstr(x[1] == 1 , name = 'one point on y=0')
     model.addConstr(y[0] == 0 , name = 'one point on y=0')
-    model.addConstr(y[n-1] == 1 , name = 'one point on y=1')
-    
     for i in range(n-1):
         model.addConstr(y[i] <= y[i+1] , name = 'Sort points')
     model.addConstr(y[n-1] == 1 , name = 'one point on y=1')
     
+    equal_ij = model.addVars(n, n, vtype=GRB.BINARY, name="equal_ij")
+    equal_ik = model.addVars(n, n, vtype=GRB.BINARY, name="equal_ik")
+    equal_jk = model.addVars(n, n, vtype=GRB.BINARY, name="equal_jk")
+    d_ki = model.addVars(n, n, vtype=GRB.BINARY, name="d_ki")
+
+    M = 1e6  # A large constant for the big-M method
+    epsilon = 1e-6  # A small tolerance value
+
+    for i in range(n):
+        for j in range(i + 1, n):
+            model.addConstr(x[i] - x[j] <= epsilon + M * (1 - equal_ij[i, j]), name=f"x_eq_{i}_{j}_ub")
+            model.addConstr(x[j] - x[i] <= epsilon + M * (1 - equal_ij[i, j]), name=f"x_eq_{i}_{j}_lb")
+
+        for k in range(i + 1, n):
+            model.addConstr(x[i] - x[k] <= epsilon + M * (1 - equal_ik[i, k]), name=f"x_eq_{i}_{k}_ub")
+            model.addConstr(x[k] - x[i] <= epsilon + M * (1 - equal_ik[i, k]), name=f"x_eq_{i}_{k}_lb")
+
+            model.addConstr(x[j] - x[k] <= epsilon + M * (1 - equal_jk[j, k]), name=f"x_eq_{j}_{k}_ub")
+            model.addConstr(x[k] - x[j] <= epsilon + M * (1 - equal_jk[j, k]), name=f"x_eq_{j}_{k}_lb")
+    
+    for k in range(n):
+        for i in range(k + 1, n):
+            model.addConstr(x[k] - x[i] >= epsilon - M * (1 - d_ki[k, i]), name=f"d_ki_lb_{k}_{i}")
+            model.addConstr(x[i] - x[k] >= epsilon - M * d_ki[k, i], name=f"d_ki_ub_{k}_{i}")
+
+
+    for i in range(n):
+        for j in range(i + 1, n):
+            for k in range(j + 1, n):
+                # x[i] = x[j] and x[k] > x[i] -> b[i,j,k] = 0
+                model.addConstr(b[i, j, k] <= 1 - equal_ij[i, j] + d_ki[k, i], name=f"b_0_{i}_{j}_{k}")
+
+                # x[i] = x[j] and x[k] < x[i] -> b[i,j,k] = 1
+                model.addConstr(b[i, j, k] >= equal_ij[i, j] - d_ki[k, i], name=f"b_1_{i}_{j}_{k}")
+
+                # x[i] = x[k] and x[j] > x[i] -> b[i,j,k] = 0
+                model.addConstr(b[i, j, k] <= 1 - equal_ik[i, k] + d_ki[j, i], name=f"b_2_{i}_{j}_{k}")
+
+                # x[i] = x[k] and x[j] < x[i] -> b[i,j,k] = 1
+                model.addConstr(b[i, j, k] >= equal_ik[i, k] - d_ki[j, i], name=f"b_3_{i}_{j}_{k}")
+
+                # x[j] = x[k] and x[i] > x[j] -> b[i,j,k] = 1
+                model.addConstr(b[i, j, k] >= equal_jk[j, k] - d_ki[i, j], name=f"b_4_{i}_{j}_{k}")
+
+                # x[j] = x[k] and x[i] < x[j] -> b[i,j,k] = 0
+                model.addConstr(b[i, j, k] <= 1 - equal_jk[j, k] + d_ki[i, j], name=f"b_5_{i}_{j}_{k}")
+
+
+
     u=n**(-1*(8/7)-(1/2000))
     for i in range(n):
         for j in range(i + 1, n):
@@ -40,6 +87,13 @@ def heilbronn_triangle(n):
                 j, k] <= 0.5*b[i,j,k] , name="upper")
                 model.addConstr(S[i, j, k] >= 0.5*(b[i,j,k]-1) , name="lower")
     
+    
+    
+    for i in range(n):
+        for j in range(n):
+            model.addConstr(quicksum(point_in_square[i, j, k] for k in range(n)) <= 1, f"Square_{i}_{j}_capacity")
+
+
     grid_size = 1.0 / n
 
     for k in range(n):
@@ -50,14 +104,26 @@ def heilbronn_triangle(n):
                 model.addConstr(point_in_square[i, j, k] * (y[k] - j * grid_size) >= 0, f"link_y_lb_{i}_{j}_{k}")
                 model.addConstr(point_in_square[i, j, k] * (y[k] - (j + 1) * grid_size) <= 0, f"link_y_ub_{i}_{j}_{k}")
 
-    for i in range(n):
-        for j in range(n):
-            model.addConstr(quicksum(point_in_square[i, j, k] for k in range(n)) <= 1, f"Square_{i}_{j}_capacity")
+
+            
 
     model.addConstr(1 <=quicksum(x) , name = 'lb x')
     model.addConstr(quicksum(x) <= n-1 , name= 'ub x')
     model.addConstr( 1 <= quicksum(y), name='lb y')
     model.addConstr(quicksum(y) <= n-1, name='ub y')
+
+
+
+    # if n%2 == 0:
+    #     model.addConstr(n/4 <=quicksum(x) , name = 'lb x')
+    #     model.addConstr(quicksum(x) <= 3*n/4 , name= 'ub x')
+    #     model.addConstr( n/4 <= quicksum(y), name='lb y')
+    #     model.addConstr(quicksum(y) <= 3*n/4, name='ub y')
+    # else:
+    #     model.addConstr((n-1)/4 <=quicksum(x) , name = 'lb x')
+    #     model.addConstr(quicksum(x) <= (3*n+1)/4 , name= 'ub x')
+    #     model.addConstr( (n-1)/4 <= quicksum(y), name='lb y')
+    #     model.addConstr(quicksum(y) <= (3*n+1)/4, name='ub y')
 
     model.setObjective(z, GRB.MAXIMIZE)
     
