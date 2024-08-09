@@ -32,22 +32,25 @@ def heilbronn_triangle(n):
     #model.addConstr(x[2] == 0 , name = 'one point on x=0')
     #model.addConstr(x[1] == 1 , name = 'one point on y=0')
     
-    model.addConstr(y[0] == 0 , name = 'one point on y=0')
-    model.addConstr(y[n-1] == 1 , name = 'one point on y=1')
+    for i in range(5):
+        model.addConstr(r2[0,i] == 0 , name = 'one point on y=0')
+        model.addConstr(r2[n-1,i] == 1 , name = 'one point on y=1')
+        
+    model.addConstr(e2[0] == 0 , name = 'one point on y=0')
+    model.addConstr(e2[n-1] == 0.03125 , name = 'one point on y=0')
     
     for i in range(n-1):
         model.addConstr(y[i] <= y[i+1] , name = 'Sort points')
 
     u=n**(-1*(8/7)-(1/2000))
+    
     for i in range(n):
         for j in range(i + 1, n):
             for k in range(j + 1, n):
                 model.addConstr(S[i, j, k] == 0.5 * (x[i] * (y[j] - y[k]) + x[j] * (y[k] - y[i]) + x[k] * (y[i] - y[j])), name=f"S_constr_{i}_{j}_{k}")
                 model.addConstr((1 - b[i, j, k])*(u+0.5) + S[i, j, k] >= z, name=f"linearize1_{i}_{j}_{k}")
                 model.addConstr(b[i, j, k]*(u+0.5) - S[i, j, k] >= z, name=f"linearize2_{i}_{j}_{k}")
-                model.addConstr(S[i, 
-                
-                j, k] <= 0.5*b[i,j,k] , name="upper")
+                model.addConstr(S[i, j, k] <= 0.5*b[i,j,k] , name="upper")
                 model.addConstr(S[i, j, k] >= 0.5*(b[i,j,k]-1) , name="lower")
     
     
