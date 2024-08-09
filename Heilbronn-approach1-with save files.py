@@ -13,18 +13,23 @@ def heilbronn_triangle(n):
 
     x = model.addVars(n, vtype=GRB.CONTINUOUS, name="x", lb=0, ub=1)
     y = model.addVars(n, vtype=GRB.CONTINUOUS, name="y", lb=0, ub=1)
+    
     S = model.addVars(n, n, n, vtype=GRB.CONTINUOUS, name="S", lb=-0.5, ub=0.5)
     b = model.addVars(n, n, n, vtype=GRB.BINARY, name="b")
     z = model.addVar(vtype=GRB.CONTINUOUS, name="z", lb=0.07184691488468573, ub=n**(-1*(8/7)-(1/2000)))
     point_in_square = model.addVars(n, n, n, vtype=GRB.BINARY, name="point_in_square")
     
     model.update()
+    
     #model.addConstr(x[2] == 0 , name = 'one point on x=0')
     #model.addConstr(x[1] == 1 , name = 'one point on y=0')
+    
     model.addConstr(y[0] == 0 , name = 'one point on y=0')
+    model.addConstr(y[n-1] == 1 , name = 'one point on y=1')
+    
     for i in range(n-1):
         model.addConstr(y[i] <= y[i+1] , name = 'Sort points')
-    model.addConstr(y[n-1] == 1 , name = 'one point on y=1')
+
     
     equal_ij = model.addVars(n, n, vtype=GRB.BINARY, name="equal_ij")
     equal_ik = model.addVars(n, n, vtype=GRB.BINARY, name="equal_ik")
@@ -146,7 +151,7 @@ def heilbronn_triangle(n):
         return optimal_z, optimal_x, optimal_y, optimize_time
     else:
         result.append("No optimal solution found")
-        return None, None
+        return None, None, None, optimize_time
 
 def plot_solution(optimal_z, optimal_x, optimal_y):
     plt.figure(figsize=(10, 10))
