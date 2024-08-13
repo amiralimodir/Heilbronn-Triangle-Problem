@@ -215,14 +215,18 @@ def heilbronn_triangle_approach3(n,H):
     z = model.addVar(vtype=GRB.CONTINUOUS, name="z", lb=0, ub=1/2)
 
     model.update()
-    M=100
+    
+    model.addConstr(y[0] == 0 , name = 'one point on y=0')
+    for i in range(n-1):
+        model.addConstr(y[i] <= y[i+1] , name = 'Sort points')
+    model.addConstr(y[n-1] == 1 , name = 'one point on y=1')
 
     for i in range(n):
         for j in range(n):
             for h in range(H):
-                model.addConstr( phi[i,j,h] <= M * xi[i,h] )
+                model.addConstr( phi[i,j,h] <= xi[i,h] )
                 model.addConstr( phi[i,j,h] <= y[j] )
-                model.addConstr( phi[i,j,h] >= y[j] + M * (1-xi[i,h]) )
+                model.addConstr( phi[i,j,h] >= y[j] + (xi[i,h]-1) )
                 model.addConstr( phi[i,j,h] >= 0 )
             
             model.addConstr(omega[i,j] >= 0)
@@ -232,7 +236,6 @@ def heilbronn_triangle_approach3(n,H):
 
             model.addConstr(w[i,j] == sum(2**(-h) * (phi[i,j,h]) for h in range(H))+ omega[i,j])
     
-    #u=n**(-1*(8/7)-(1/2000))
     for i in range(n):
         for j in range(i + 1, n):
             for k in range(j + 1, n):
@@ -241,6 +244,12 @@ def heilbronn_triangle_approach3(n,H):
                 model.addConstr(b[i, j, k] - S[i, j, k] >= z, name=f"linearize2_{i}_{j}_{k}")
                 model.addConstr(S[i, j, k] <= 0.5*b[i,j,k] , name="upper")
                 model.addConstr(S[i, j, k] >= 0.5*(b[i,j,k]-1) , name="lower")
+    
+    model.addConstr( 1 <= quicksum(y), name='lb y')
+    model.addConstr(quicksum(y) <= n-1, name='ub y')
+    
+    model.addConstr( n*(n-1)*(n-2)/4*3*2 <= quicksum(b), name='lb b')
+    model.addConstr(quicksum(b) <= n*(n-1)*(n-2)/4*3*2 , name='ub b')
     
     model.setObjective(z, GRB.MAXIMIZE)
     
@@ -253,7 +262,10 @@ def heilbronn_triangle_approach3(n,H):
     if model.status == GRB.OPTIMAL:
         result.append(f"Optimal value: {z.X}")
         optimal_z = z.X
-        return optimal_z, optimize_time
+        optimal_xi = [xi[i,h].X for i in range(n) for j in range(H)]
+        optimal_ep = [ep[i].X for i in range(n)]
+        optimal_y = [y[i].X for i in range(n)]
+        return optimal_z, optimal_xi,optimal_ep,optimal_y,optimize_time
     else:
         result.append("No optimal solution found")
         return None, None
