@@ -262,10 +262,10 @@ def heilbronn_triangle_approach3(n,H):
     if model.status == GRB.OPTIMAL:
         result.append(f"Optimal value: {z.X}")
         optimal_z = z.X
-        optimal_xi = [xi[i,h].X for i in range(n) for j in range(H)]
+        optimal_x = [ w[i,n-1].X/y[n-1].X for i in range(n)]
         optimal_ep = [ep[i].X for i in range(n)]
         optimal_y = [y[i].X for i in range(n)]
-        return optimal_z, optimal_xi,optimal_ep,optimal_y,optimize_time
+        return optimal_z, optimal_x,optimal_ep,optimal_y,optimize_time
     else:
         result.append("No optimal solution found")
         return None, None
@@ -343,8 +343,13 @@ if m == 2:
 
 elif m == 3:
     H = int(input('H: '))
-    optimal_z , optimize_time = heilbronn_triangle_approach3(n,5)
+    optimal_z, optimal_x,optimal_ep,optimal_y,optimize_time = heilbronn_triangle_approach3(n,H)
+    print(optimal_ep, 'epsilon')
+    result.append(f"x = {optimal_x}")
+    result.append(f"y = {optimal_y}")
     result.append(f"time = {optimize_time}")
+    if optimal_x is not None and optimal_y is not None:
+        plot_solution(optimal_z, optimal_x, optimal_y)
 
 with open('result.text' , 'w') as file:
     for item in result:
