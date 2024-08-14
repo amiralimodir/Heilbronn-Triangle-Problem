@@ -105,8 +105,8 @@ def heilbronn_triangle_approach1(n):
     model.addConstr( 1 <= quicksum(y), name='lb y')
     model.addConstr(quicksum(y) <= n-1, name='ub y')
     
-    model.addConstr( n*(n-1)*(n-2)/4*3*2 <= quicksum(b), name='lb b')
-    model.addConstr(quicksum(b) <= n*(n-1)*(n-2)/4*2 , name='ub b')
+    model.addConstr( n*(n-1)*(n-2)/(4*3*2) <= quicksum(b), name='lb b')
+    model.addConstr(quicksum(b) <= n*(n-1)*(n-2)/(4*2) , name='ub b')
 
     # if n%2 == 0:
     #     model.addConstr(n/4 <=quicksum(x) , name = 'lb x')
@@ -171,9 +171,6 @@ def heilbronn_triangle_approach2(n):
     model.addConstr(quicksum(x) <= n-1 , name= 'ub x')
     model.addConstr( 1 <= quicksum(y), name='lb y')
     model.addConstr(quicksum(y) <= n-1, name='ub y')
-    
-    model.addConstr( n*(n-1)*(n-2)/4*3*2 <= quicksum(b), name='lb b')
-    model.addConstr(quicksum(b) <= n*(n-1)*(n-2)/4*2 , name='ub b')
 
     model.setObjective(z, GRB.MAXIMIZE)
 
@@ -239,8 +236,8 @@ def heilbronn_triangle_approach3(n,H):
     model.addConstr( 1 <= quicksum(y), name='lb y')
     model.addConstr(quicksum(y) <= n-1, name='ub y')
     
-    model.addConstr( n*(n-1)*(n-2)/4*3*2 <= quicksum(b), name='lb b')
-    model.addConstr(quicksum(b) <= n*(n-1)*(n-2)/4*2 , name='ub b')
+    model.addConstr( n*(n-1)*(n-2)/(4*3*2) <= quicksum(b), name='lb b')
+    model.addConstr(quicksum(b) <= n*(n-1)*(n-2)/(4*2) , name='ub b')
     
     model.setObjective(z, GRB.MAXIMIZE)
     
