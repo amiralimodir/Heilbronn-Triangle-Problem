@@ -123,12 +123,14 @@ def heilbronn_triangle_approach1(n,upperbound):
     #model.setParam('MIPGapAbs', 0.01)
     #model.setParam('FeasibilityTol', 1e-6)
     #model.setParam('IntFeasTol', 1e-6)
-    model.setParam('TimeLimit', 600)
+    model.setParam('TimeLimit', 1000)
 
     model.optimize()
 
     if model.status == GRB.OPTIMAL:
-        return (z.X,z.X)
+        optimal_x = [x[i].X for i in range(n)]
+        optimal_y = [y[i].X for i in range(n)]
+        return ('optimal solution',(z.X,optimal_x,optimal_y))
     elif model.status == GRB.TIME_LIMIT:
         best_bound = model.ObjBound
         if model.SolCount > 0:
@@ -136,11 +138,69 @@ def heilbronn_triangle_approach1(n,upperbound):
             return (incumbent_solution,best_bound)
         else:
             return('No incumbent',best_bound)
+        
+    
+def plot_solution(optimal_z, optimal_x, optimal_y):
+    plt.figure(figsize=(10, 10))
+    plt.scatter(optimal_x, optimal_y, c='red')
+
+    n = len(optimal_x)
+    for i in range(n):
+        plt.annotate(f"{i}", (optimal_x[i], optimal_y[i]), textcoords="offset points", xytext=(5, 5), ha='center')
+        
+    x=optimal_x
+    y=optimal_y
+    z=optimal_z
+    minarea=100
+    
+    for i in range(n):
+        for j in range(i + 1, n):
+            for k in range(j + 1, n):
+                area =abs( 0.5 * (x[i] * (y[j] - y[k]) + x[j] * (y[k] - y[i]) + x[k] * (y[i] - y[j])) )
+                if area<=minarea:
+                    minarea=area
+
+    for i in range(n):
+        for j in range(i + 1, n):
+            for k in range(j + 1, n):
+                area =abs( 0.5 * (x[i] * (y[j] - y[k]) + x[j] * (y[k] - y[i]) + x[k] * (y[i] - y[j])) )
+                if(area == minarea):
+                    trianglex=[x[i],x[j],x[k]]
+                    triangley=[y[i],y[j],y[k]]
+                    for t in range(3):
+                        plt.plot(trianglex, triangley, 'g-')
+                        
+                    plt.fill(trianglex, triangley)
+                    print(i,',',j,',',k)
+                    print('(',x[i],',',y[i],')')
+                    print('(',x[j],',',y[j],')')
+                    print('(',x[k],',',y[k],')')
+                    print('Area:',area)
+
+                plt.plot([optimal_x[i], optimal_x[j]], [optimal_y[i], optimal_y[j]], 'b-')
+                plt.plot([optimal_x[j], optimal_x[k]], [optimal_y[j], optimal_y[k]], 'b-')
+                plt.plot([optimal_x[k], optimal_x[i]], [optimal_y[k], optimal_y[i]], 'b-')
+
+    plt.xlim(0, 1)
+    plt.ylim(0, 1)
+    plt.xlabel('x')
+    plt.ylabel('y')
+    plt.title('Optimal Points and Triangles')
+    plt.grid(True)
+    plt.savefig('result.jpg')
+    plt.show()
+    
 
 upper_bounds=[0.1924,0.125,0.083859,0.072376,0.054876,0.046537,0.037037,0.032599,0.026697,0.024304,0.020789,0.020528,0.020528,0.020528,0.020528]
 ns=[6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]
 ans=[]
-for i in range(len(ns)):
-    ans.append(ns[i],upper_bounds[i])
+#for i in range(len(ns)):
+#    ans.append(heilbronn_triangle_approach1(ns[i],upper_bounds[i]))
 
+#print(ans)
+
+
+ans=heilbronn_triangle_approach1(8, 0.083859)
 print(ans)
+if ans[0]=='optimal solution':
+    plot_solution(ans[1][0], ans[1][1], ans[1][2])
