@@ -67,7 +67,8 @@ def heilbronn_triangle(n):
         optimal_z = z.X
         optimal_x = [x[i].X for i in range(n)]
         optimal_y = [y[i].X for i in range(n)]
-        return optimal_z, optimal_x, optimal_y, optimize_time
+        optimal_b = sum(b[i,j,k].X for i in range(n) for j in range(i+1,n) for k in range(j+1,n))
+        return optimal_z, optimal_b,optimal_x, optimal_y, optimize_time
     else:
         print("No optimal solution found")
         return None, None
@@ -119,7 +120,8 @@ def plot_solution(optimal_z, optimal_x, optimal_y):
     plt.show()
 
 n = int(input())
-optimal_z ,optimal_x, optimal_y, optimize_time = heilbronn_triangle(n)
+optimal_z,optimal_b ,optimal_x, optimal_y, optimize_time = heilbronn_triangle(n)
+print('sum b= ', optimal_b)
 print('x = ',optimal_x)
 print('y = ',optimal_y)
 print('time = ',optimize_time)

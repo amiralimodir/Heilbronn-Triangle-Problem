@@ -13,7 +13,7 @@ def heilbronn_triangle_approach1(n):
     y = model.addVars(n, vtype=GRB.CONTINUOUS, name="y", lb=0, ub=1)
     S = model.addVars(n, n, n, vtype=GRB.CONTINUOUS, name="S", lb=-0.5, ub=0.5)
     b = model.addVars(n, n, n, vtype=GRB.BINARY, name="b")
-    z = model.addVar(vtype=GRB.CONTINUOUS, name="z", lb=0.07184691488468573, ub=n**(-1*(8/7)-(1/2000)))
+    z = model.addVar(vtype=GRB.CONTINUOUS, name="z", lb=math.log(n)/(n**2), ub=0.125)
     point_in_square = model.addVars(n, n, n, vtype=GRB.BINARY, name="point_in_square")
     
     model.update()
@@ -105,8 +105,8 @@ def heilbronn_triangle_approach1(n):
     model.addConstr( 1 <= quicksum(y), name='lb y')
     model.addConstr(quicksum(y) <= n-1, name='ub y')
     
-    model.addConstr( n*(n-1)*(n-2)/4*3*2 <= quicksum(b), name='lb b')
-    model.addConstr(quicksum(b) <= n*(n-1)*(n-2)/4*2 , name='ub b')
+    model.addConstr( (n*(n-1)*(n-2)/(4*3))*0.9 <= sum(b[i,j,k] for i in range(n) for j in range(i+1,n) for k in range(j+1,n)), name='lb b')
+    model.addConstr(sum(b[i,j,k] for i in range(n) for j in range(i+1,n) for k in range(j+1,n)) <= (n*(n-1)*(n-2)/(4*3))*1.1 , name='ub b')
 
     # if n%2 == 0:
     #     model.addConstr(n/4 <=quicksum(x) , name = 'lb x')
@@ -137,7 +137,8 @@ def heilbronn_triangle_approach1(n):
         optimal_z = z.X
         optimal_x = [x[i].X for i in range(n)]
         optimal_y = [y[i].X for i in range(n)]
-        return optimal_z, optimal_x, optimal_y, optimize_time
+        optimal_b = sum(b[i,j,k].X for i in range(n) for j in range(i+1,n) for k in range(j+1,n))
+        return optimal_z, optimal_b, optimal_x, optimal_y, optimize_time
     else:
         result.append("No optimal solution found")
         return None, None, None, None
@@ -171,9 +172,6 @@ def heilbronn_triangle_approach2(n):
     model.addConstr(quicksum(x) <= n-1 , name= 'ub x')
     model.addConstr( 1 <= quicksum(y), name='lb y')
     model.addConstr(quicksum(y) <= n-1, name='ub y')
-    
-    model.addConstr( n*(n-1)*(n-2)/4*3*2 <= quicksum(b), name='lb b')
-    model.addConstr(quicksum(b) <= n*(n-1)*(n-2)/4*2 , name='ub b')
 
     model.setObjective(z, GRB.MAXIMIZE)
 
@@ -186,7 +184,7 @@ def heilbronn_triangle_approach2(n):
         optimal_z = z.X
         optimal_x = [x[i].X for i in range(n)]
         optimal_y = [y[i].X for i in range(n)]
-        return optimal_z, optimal_x, optimal_y, optimize_time
+        return optimal_z,optimal_x, optimal_y, optimize_time
     else:
         result.append("No optimal solution found")
         return None, None, None, None
@@ -211,6 +209,11 @@ def heilbronn_triangle_approach3(n,H):
         model.addConstr(y[i] <= y[i+1] , name = 'Sort points')
         
     model.addConstr(y[n-1] == 1 , name = 'one point on y=1')
+    
+    for i in range(n):
+        model.addConstr(w[i,0] == 0 , name = 'one point on w=0')
+        for j in range(n-1):
+            model.addConstr(w[i,j] <= w[i,j+1] , name = 'Sort points')
 
     for i in range(n):
         for j in range(n):
@@ -225,7 +228,7 @@ def heilbronn_triangle_approach3(n,H):
             model.addConstr(omega[i,j] <= (2**(-H))*y[j])
             model.addConstr(omega[i,j] <= ep[i])
 
-            model.addConstr(w[i,j] == sum(2**(-h) * (phi[i,j,h]) for h in range(H))+ omega[i,j])
+            model.addConstr(w[i,j] == sum(2**(-h-1) * (phi[i,j,h]) for h in range(H))+ omega[i,j])
     
     for i in range(n):
         for j in range(i + 1, n):
@@ -239,8 +242,12 @@ def heilbronn_triangle_approach3(n,H):
     model.addConstr( 1 <= quicksum(y), name='lb y')
     model.addConstr(quicksum(y) <= n-1, name='ub y')
     
-    model.addConstr( n*(n-1)*(n-2)/4*3*2 <= quicksum(b), name='lb b')
-    model.addConstr(quicksum(b) <= n*(n-1)*(n-2)/4*2 , name='ub b')
+    model.addConstr( (n*(n-1)*(n-2)/(4*3))-1 <= quicksum(b), name='lb b')
+    model.addConstr(quicksum(b) <= (n*(n-1)*(n-2)/(4*3))+1 , name='ub b')
+    
+    for h in range(H):
+        model.addConstr(sum(xi[i,h] for i in range(n)) <= 0.75*n)
+        model.addConstr(sum(xi[i,h] for i in range(n)) >= 0.25*n)
     
     model.setObjective(z, GRB.MAXIMIZE)
     
@@ -315,7 +322,8 @@ n = int(input('n: '))
 m = int(input('Approch? '))
 
 if m == 1:
-    optimal_z ,optimal_x, optimal_y, optimize_time = heilbronn_triangle_approach1(n)
+    optimal_z, optimal_b,optimal_x, optimal_y, optimize_time = heilbronn_triangle_approach1(n)
+    print(optimal_b)
     result.append(f"x = {optimal_x}")
     result.append(f"y = {optimal_y}")
     result.append(f"time = {optimize_time}")
@@ -333,7 +341,7 @@ if m == 2:
 elif m == 3:
     H = int(input('H: '))
     optimal_z, optimal_x,optimal_ep,optimal_y,optimize_time = heilbronn_triangle_approach3(n,H)
-    print(optimal_ep, 'epsilon')
+    #print(optimal_ep, 'epsilon')
     result.append(f"x = {optimal_x}")
     result.append(f"y = {optimal_y}")
     result.append(f"time = {optimize_time}")
@@ -346,5 +354,3 @@ with open('result.text' , 'w') as file:
 
 for item in result:
     print(item)
-
-
