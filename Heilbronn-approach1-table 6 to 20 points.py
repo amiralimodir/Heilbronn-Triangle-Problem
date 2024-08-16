@@ -3,15 +3,16 @@ from gurobipy import Model,quicksum,GRB
 import matplotlib.pyplot as plt
 import time
 import math
+import pandas as pd
 
-def heilbronn_triangle_approach1(n,upperbound):
+def heilbronn_triangle_approach1(n,ub):
     model = gp.Model("Heilbronn Triangle")
 
     x = model.addVars(n, vtype=GRB.CONTINUOUS, name="x", lb=0, ub=1)
     y = model.addVars(n, vtype=GRB.CONTINUOUS, name="y", lb=0, ub=1)
     S = model.addVars(n, n, n, vtype=GRB.CONTINUOUS, name="S", lb=-0.5, ub=0.5)
     b = model.addVars(n, n, n, vtype=GRB.BINARY, name="b")
-    z = model.addVar(vtype=GRB.CONTINUOUS, name="z", lb=math.log(n)/(n**2), ub=upperbound)
+    z = model.addVar(vtype=GRB.CONTINUOUS, name="z", lb=math.log(n)/(n**2), ub=ub)
     point_in_square = model.addVars(n, n, n, vtype=GRB.BINARY, name="point_in_square")
     
     model.update()
@@ -103,8 +104,8 @@ def heilbronn_triangle_approach1(n,upperbound):
     model.addConstr( 1 <= quicksum(y), name='lb y')
     model.addConstr(quicksum(y) <= n-1, name='ub y')
     
-    model.addConstr( n*(n-1)*(n-2)/(4*3*2) <= quicksum(b), name='lb b')
-    model.addConstr(quicksum(b) <= n*(n-1)*(n-2)/(4*2) , name='ub b')
+    model.addConstr( (n*(n-1)*(n-2)/(4*3))*0.9 <= sum(b[i,j,k] for i in range(n) for j in range(i+1,n) for k in range(j+1,n)), name='lb b')
+    model.addConstr(sum(b[i,j,k] for i in range(n) for j in range(i+1,n) for k in range(j+1,n)) <= (n*(n-1)*(n-2)/(4*3))*1.1 , name='ub b')
 
     # if n%2 == 0:
     #     model.addConstr(n/4 <=quicksum(x) , name = 'lb x')
@@ -123,7 +124,7 @@ def heilbronn_triangle_approach1(n,upperbound):
     #model.setParam('MIPGapAbs', 0.01)
     #model.setParam('FeasibilityTol', 1e-6)
     #model.setParam('IntFeasTol', 1e-6)
-    model.setParam('TimeLimit', 1000)
+    model.setParam('TimeLimit', 4000)
 
     model.optimize()
 
@@ -138,69 +139,35 @@ def heilbronn_triangle_approach1(n,upperbound):
             return (incumbent_solution,best_bound)
         else:
             return('No incumbent',best_bound)
-        
+
+data={'N':[6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]}
+
+ans6=heilbronn_triangle_approach1(6,0.1924)
+data['Incumbent']=['-']
+data['BestBd']=['-']
+data['Optimal Z']=[ans6[1][0]]
+data['Optimal X']=[ans6[1][1]]
+data['Optimal Y']=[ans6[1][2]]
+
+for i in range(1,len(ns)):
+    if ans[i-1][0] == 'optimal solution':
+        ans=heilbronn_triangle_approach1(ns[i],ans[i-1][1][0])
+    else:
+        ans=heilbronn_triangle_approach1(ns[i],ans[i-1][1])
     
-def plot_solution(optimal_z, optimal_x, optimal_y):
-    plt.figure(figsize=(10, 10))
-    plt.scatter(optimal_x, optimal_y, c='red')
+    if ans[0] == 'optimal solution':
+        data['Incumbent'].append('-')
+        data['BestBd'].append('-')
+        data['Optimal Z'].append(ans[1][0])
+        data['Optimal X'].append(ans[1][1])
+        data['Optimal Y'].append(ans[1][2])
+    else:
+        data['Incumbent'].append(ans[0])
+        data['BestBd'].append(ans[1])
+        data['Optimal Z'].append('_')
+        data['Optimal X'].append('_')
+        data['Optimal Y'].append('_')
 
-    n = len(optimal_x)
-    for i in range(n):
-        plt.annotate(f"{i}", (optimal_x[i], optimal_y[i]), textcoords="offset points", xytext=(5, 5), ha='center')
-        
-    x=optimal_x
-    y=optimal_y
-    z=optimal_z
-    minarea=100
-    
-    for i in range(n):
-        for j in range(i + 1, n):
-            for k in range(j + 1, n):
-                area =abs( 0.5 * (x[i] * (y[j] - y[k]) + x[j] * (y[k] - y[i]) + x[k] * (y[i] - y[j])) )
-                if area<=minarea:
-                    minarea=area
-
-    for i in range(n):
-        for j in range(i + 1, n):
-            for k in range(j + 1, n):
-                area =abs( 0.5 * (x[i] * (y[j] - y[k]) + x[j] * (y[k] - y[i]) + x[k] * (y[i] - y[j])) )
-                if(area == minarea):
-                    trianglex=[x[i],x[j],x[k]]
-                    triangley=[y[i],y[j],y[k]]
-                    for t in range(3):
-                        plt.plot(trianglex, triangley, 'g-')
-                        
-                    plt.fill(trianglex, triangley)
-                    print(i,',',j,',',k)
-                    print('(',x[i],',',y[i],')')
-                    print('(',x[j],',',y[j],')')
-                    print('(',x[k],',',y[k],')')
-                    print('Area:',area)
-
-                plt.plot([optimal_x[i], optimal_x[j]], [optimal_y[i], optimal_y[j]], 'b-')
-                plt.plot([optimal_x[j], optimal_x[k]], [optimal_y[j], optimal_y[k]], 'b-')
-                plt.plot([optimal_x[k], optimal_x[i]], [optimal_y[k], optimal_y[i]], 'b-')
-
-    plt.xlim(0, 1)
-    plt.ylim(0, 1)
-    plt.xlabel('x')
-    plt.ylabel('y')
-    plt.title('Optimal Points and Triangles')
-    plt.grid(True)
-    plt.savefig('result.jpg')
-    plt.show()
-    
-
-upper_bounds=[0.1924,0.125,0.083859,0.072376,0.054876,0.046537,0.037037,0.032599,0.026697,0.024304,0.020789,0.020528,0.020528,0.020528,0.020528]
-ns=[6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]
-ans=[]
-#for i in range(len(ns)):
-#    ans.append(heilbronn_triangle_approach1(ns[i],upper_bounds[i]))
-
-#print(ans)
-
-
-ans=heilbronn_triangle_approach1(8, 0.083859)
-print(ans)
-if ans[0]=='optimal solution':
-    plot_solution(ans[1][0], ans[1][1], ans[1][2])
+print(data)
+df = pd.DataFrame(data)
+df.to_excel("result 6 - 20 points.xlsx", index=False)
