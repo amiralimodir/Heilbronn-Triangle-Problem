@@ -6,15 +6,16 @@ import math
 
 result=[]
 
-def heilbronn_triangle_approach1(n,ub):
+def heilbronn_triangle_approach1(n,m,ub):
     model = gp.Model("Heilbronn Triangle")
 
     x = model.addVars(n, vtype=GRB.CONTINUOUS, name="x", lb=0, ub=1)
     y = model.addVars(n, vtype=GRB.CONTINUOUS, name="y", lb=0, ub=1)
+    w = model.addVars(n,n, vtype=GRB.CONTINUOUS, name="w", lb=0, ub=1)
     S = model.addVars(n, n, n, vtype=GRB.CONTINUOUS, name="S", lb=-0.5, ub=0.5)
     b = model.addVars(n, n, n, vtype=GRB.BINARY, name="b")
     z = model.addVar(vtype=GRB.CONTINUOUS, name="z", lb=math.log(n)/(n**2), ub=ub)
-    point_in_square = model.addVars(n, n, n, vtype=GRB.BINARY, name="point_in_square")
+    point_in_square = model.addVars(m, m, n, vtype=GRB.BINARY, name="point_in_square")
     
     model.update()
     
@@ -25,6 +26,12 @@ def heilbronn_triangle_approach1(n,ub):
     model.addConstr(y[n-1] == 1 , name = 'one point on y=1')
     for i in range(n-1):
         model.addConstr(y[i] <= y[i+1] , name = 'Sort points')
+    
+    for i in range(n):
+        model.addConstr(w[i,0] == 0)
+        for j in range(1,n):
+            model.addConstr(w[i,j] == x[i]*y[j])
+            model.addConstr(w[i,j-1] <= w[i,j])
     
     # equal_ij = model.addVars(n, n, vtype=GRB.BINARY, name="equal_ij")
     # equal_ik = model.addVars(n, n, vtype=GRB.BINARY, name="equal_ik")
@@ -78,23 +85,21 @@ def heilbronn_triangle_approach1(n,ub):
     for i in range(n):
         for j in range(i + 1, n):
             for k in range(j + 1, n):
-                model.addConstr(S[i, j, k] == 0.5 * (x[i] * (y[j] - y[k]) + x[j] * (y[k] - y[i]) + x[k] * (y[i] - y[j])), name=f"S_constr_{i}_{j}_{k}")
+                model.addConstr(S[i, j, k] == 0.5 * (w[i,j] - w[i,k] + w[j,k] - w[j,i] + w[k,i] - w[k,j]), name=f"S_constr_{i}_{j}_{k}")
                 model.addConstr((1 - b[i, j, k])*(u+0.5) + S[i, j, k] >= z, name=f"linearize1_{i}_{j}_{k}")
                 model.addConstr(b[i, j, k]*(u+0.5) - S[i, j, k] >= z, name=f"linearize2_{i}_{j}_{k}")
-                model.addConstr(S[i, 
-                
-                j, k] <= 0.5*b[i,j,k] , name="upper")
+                model.addConstr(S[i, j, k] <= 0.5*b[i,j,k] , name="upper")
                 model.addConstr(S[i, j, k] >= 0.5*(b[i,j,k]-1) , name="lower")
     
-    for i in range(n):
-        for j in range(n):
+    for i in range(m):
+        for j in range(m):
             model.addConstr(quicksum(point_in_square[i, j, k] for k in range(n)) <= 1, f"Square_{i}_{j}_capacity")
 
-    grid_size = 1.0 / n
+    grid_size = 1.0 / m
 
     for k in range(n):
-        for i in range(n):
-            for j in range(n):
+        for i in range(m):
+            for j in range(m):
                 model.addConstr(point_in_square[i, j, k] * (x[k] - i * grid_size) >= 0, f"link_x_lb_{i}_{j}_{k}")
                 model.addConstr(point_in_square[i, j, k] * (x[k] - (i + 1) * grid_size) <= 0, f"link_x_ub_{i}_{j}_{k}")
                 model.addConstr(point_in_square[i, j, k] * (y[k] - j * grid_size) >= 0, f"link_y_lb_{i}_{j}_{k}")
@@ -105,8 +110,8 @@ def heilbronn_triangle_approach1(n,ub):
     model.addConstr( 1 <= quicksum(y), name='lb y')
     model.addConstr(quicksum(y) <= n-1, name='ub y')
     
-    model.addConstr( (n*(n-1)*(n-2)/(4*3))*0.9 <= sum(b[i,j,k] for i in range(n) for j in range(i+1,n) for k in range(j+1,n)), name='lb b')
-    model.addConstr(sum(b[i,j,k] for i in range(n) for j in range(i+1,n) for k in range(j+1,n)) <= (n*(n-1)*(n-2)/(4*3))*1.1 , name='ub b')
+    model.addConstr( (n*(n-1)*(n-2)/(4*3*2)) <= quicksum(b), name='lb b')
+    model.addConstr( quicksum(b) <= (n*(n-1)*(n-2)/(4*2)) , name='ub b')
 
     # if n%2 == 0:
     #     model.addConstr(n/4 <=quicksum(x) , name = 'lb x')
@@ -167,7 +172,8 @@ def heilbronn_triangle_approach2(n):
                 model.addConstr(S[i,j,k]*S[i,j,k] == U[i,j,k]*U[i,j,k], name=f"quad_{i}_{j}_{k}")
                 model.addConstr(U[i,j,k] >= z, name=f"U_constr_{i}_{j}_{k}")
                 model.addConstr(z >= 1e-10 , name= 'Not in a line')
-
+    
+    
     model.addConstr(1 <=quicksum(x) , name = 'lb x')
     model.addConstr(quicksum(x) <= n-1 , name= 'ub x')
     model.addConstr( 1 <= quicksum(y), name='lb y')
@@ -189,7 +195,7 @@ def heilbronn_triangle_approach2(n):
         result.append("No optimal solution found")
         return None, None, None, None
 
-def heilbronn_triangle_approach3_MILP(n,H,ub):
+def heilbronn_triangle_approach3_MILP(n,H,m,ub):
     model = gp.Model("Heilbronn Triangle")
 
     w = model.addVars(n,n, vtype=GRB.CONTINUOUS, name="x", lb=0, ub=1)
@@ -201,8 +207,13 @@ def heilbronn_triangle_approach3_MILP(n,H,ub):
     S = model.addVars(n, n, n, vtype=GRB.CONTINUOUS, name="S", lb=-0.5, ub=0.5)
     b = model.addVars(n, n, n, vtype=GRB.BINARY, name="b")
     z = model.addVar(vtype=GRB.CONTINUOUS, name="z", lb=math.log(n)/(n**2), ub=ub)
+    point_in_rectangle = model.addVars(m, n, vtype=GRB.BINARY, name="point_in_square")
 
     model.update()
+
+    # for i in range(n):
+    #     for h in range(H):
+    #         xi[i, h].BranchPriority = n - i  # Higher priority for smaller i
     
     model.addConstr(y[0] == 0 , name = 'one point on y=0')
     for i in range(n-1):
@@ -239,6 +250,17 @@ def heilbronn_triangle_approach3_MILP(n,H,ub):
                 model.addConstr(S[i, j, k] <= 0.5*b[i,j,k] , name="upper")
                 model.addConstr(S[i, j, k] >= 0.5*(b[i,j,k]-1) , name="lower")
     
+    for i in range(m):
+        model.addConstr(quicksum(point_in_rectangle[i, k] for k in range(n)) <= 2, f"Square_{i}_capacity")
+
+    grid_size = 1.0 / m
+
+    for k in range(n):
+        for j in range(m):
+            model.addConstr(point_in_rectangle[i, k] * (y[k] - j * grid_size) >= 0, f"link_y_lb_{j}_{k}")
+            model.addConstr(point_in_rectangle[i, k] * (y[k] - (j + 1) * grid_size) <= 0, f"link_y_ub_{j}_{k}")
+
+    
     model.addConstr( 1 <= quicksum(y), name='lb y')
     model.addConstr(quicksum(y) <= n-1, name='ub y')
     
@@ -269,7 +291,7 @@ def heilbronn_triangle_approach3_MILP(n,H,ub):
         return None, None
 
 
-def heilbronn_triangle_approach3_MIQCP(n,H,ub):
+def heilbronn_triangle_approach3_MIQCP(n,H,m,ub):
     model = gp.Model("Heilbronn Triangle")
 
     w = model.addVars(n,n, vtype=GRB.CONTINUOUS, name="x", lb=0, ub=1)
@@ -281,6 +303,7 @@ def heilbronn_triangle_approach3_MIQCP(n,H,ub):
     S = model.addVars(n, n, n, vtype=GRB.CONTINUOUS, name="S", lb=-0.5, ub=0.5)
     b = model.addVars(n, n, n, vtype=GRB.BINARY, name="b")
     z = model.addVar(vtype=GRB.CONTINUOUS, name="z", lb=math.log(n)/(n**2), ub=ub)
+    point_in_rectangle = model.addVars(m, n, vtype=GRB.BINARY, name="point_in_square")
 
     model.update()
     
@@ -312,7 +335,17 @@ def heilbronn_triangle_approach3_MIQCP(n,H,ub):
                 model.addConstr(b[i, j, k] - S[i, j, k] >= z, name=f"linearize2_{i}_{j}_{k}")
                 model.addConstr(S[i, j, k] <= 0.5*b[i,j,k] , name="upper")
                 model.addConstr(S[i, j, k] >= 0.5*(b[i,j,k]-1) , name="lower")
-    
+
+    for i in range(m):
+        model.addConstr(quicksum(point_in_rectangle[i, k] for k in range(n)) <= 2, f"Square_{i}_capacity")
+
+    grid_size = 1.0 / m
+
+    for k in range(n):
+        for j in range(m):
+            model.addConstr(point_in_rectangle[i, k] * (y[k] - j * grid_size) >= 0, f"link_y_lb_{j}_{k}")
+            model.addConstr(point_in_rectangle[i, k] * (y[k] - (j + 1) * grid_size) <= 0, f"link_y_ub_{j}_{k}")
+
     model.addConstr( 1 <= quicksum(y), name='lb y')
     model.addConstr(quicksum(y) <= n-1, name='ub y')
     
@@ -399,7 +432,8 @@ ub = float(input('Upper bound ? '))
 m = int(input('Approch? '))
 
 if m == 1:
-    optimal_z, optimal_b,optimal_x, optimal_y, optimize_time = heilbronn_triangle_approach1(n,ub)
+    M=int(input('m: '))
+    optimal_z, optimal_b,optimal_x, optimal_y, optimize_time = heilbronn_triangle_approach1(n,M,ub)
     print(optimal_b)
     result.append(f"x = {optimal_x}")
     result.append(f"y = {optimal_y}")
@@ -417,11 +451,12 @@ if m == 2:
 
 elif m == 3:
     H = int(input('H: '))
+    M = int(input('M: '))
     s = input('MIQCP or MILP ? ')
     if s == 'MILP':
-        optimal_z, optimal_x,optimal_ep,optimal_y,optimize_time = heilbronn_triangle_approach3_MILP(n,H,ub)
+        optimal_z, optimal_x,optimal_ep,optimal_y,optimize_time = heilbronn_triangle_approach3_MILP(n,H,M,ub)
     else:
-        optimal_z, optimal_x,optimal_ep,optimal_y,optimize_time = heilbronn_triangle_approach3_MILP(n,H,ub)
+        optimal_z, optimal_x,optimal_ep,optimal_y,optimize_time = heilbronn_triangle_approach3_MILP(n,H,M,ub)
     #print(optimal_ep, 'epsilon')
     result.append(f"x = {optimal_x}")
     result.append(f"y = {optimal_y}")

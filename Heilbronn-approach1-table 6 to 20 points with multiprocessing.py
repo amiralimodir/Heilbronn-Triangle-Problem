@@ -51,8 +51,8 @@ def heilbronn_triangle_approach1(n, ub):
     model.addConstr(1 <= quicksum(y), name='lb y')
     model.addConstr(quicksum(y) <= n-1, name='ub y')
     
-    model.addConstr((n*(n-1)*(n-2)/(4*3))*0.9 <= sum(b[i,j,k] for i in range(n) for j in range(i+1,n) for k in range(j+1,n)), name='lb b')
-    model.addConstr(sum(b[i,j,k] for i in range(n) for j in range(i+1,n) for k in range(j+1,n)) <= (n*(n-1)*(n-2)/(4*3))*1.1 , name='ub b')
+    model.addConstr( (n*(n-1)*(n-2)/(4*3*2)) <= quicksum(b), name='lb b')
+    model.addConstr( quicksum(b) <= (n*(n-1)*(n-2)/(4*2)) , name='ub b')
 
     model.setObjective(z, GRB.MAXIMIZE)
     
