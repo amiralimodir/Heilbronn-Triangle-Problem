@@ -16,8 +16,8 @@ def heilbronn_triangle_approach1(n,m,ub):
     b = model.addVars(n, n, n, vtype=GRB.BINARY, name="b")
     z = model.addVar(vtype=GRB.CONTINUOUS, name="z", lb=math.log(n)/(n**2), ub=ub)
     point_in_square = model.addVars(m, m, n, vtype=GRB.BINARY, name="point_in_square")
-    #point_in_rectangle_x = model.addVars(m, n, vtype=GRB.BINARY, name="point_in_square")
-    #point_in_rectangle_y = model.addVars(m, n, vtype=GRB.BINARY, name="point_in_square")
+    point_in_rectangle_x = model.addVars(m, n, vtype=GRB.BINARY, name="point_in_square")
+    point_in_rectangle_y = model.addVars(m, n, vtype=GRB.BINARY, name="point_in_square")
 
     model.update()
     
@@ -28,8 +28,14 @@ def heilbronn_triangle_approach1(n,m,ub):
     model.addConstr(y[1] == 0 , name = 'one point on y=0')
     model.addConstr(x[1]-x[0] >= 1/(2*m))
     model.addConstr(y[n-1] == 1 , name = 'one point on y=1')
+    
     for i in range(1,n-1):
         model.addConstr(y[i] <= y[i+1] , name = 'Sort points')
+    
+    # for i in range(n):
+    #     model.addConstr(x[i] <= 1- c[i] , name = 'One x zero')
+    
+    # model.addConstr(quicksum(c) == 1)
     
     for i in range(n):
         model.addConstr(w[i,0] == 0)
@@ -323,12 +329,8 @@ def heilbronn_triangle_approach3_MILP(n,H,m,ub):
     model.addConstr( 1 <= quicksum(y), name='lb y')
     model.addConstr(quicksum(y) <= n-1, name='ub y')
     
-    model.addConstr( (n*(n-1)*(n-2)/(4*3))-1 <= quicksum(b), name='lb b')
-    model.addConstr(quicksum(b) <= (n*(n-1)*(n-2)/(4*3))+1 , name='ub b')
-    
-    for h in range(H):
-        model.addConstr(sum(xi[i,h] for i in range(n)) <= 0.75*n)
-        model.addConstr(sum(xi[i,h] for i in range(n)) >= 0.25*n)
+    model.addConstr( n*(n-1)*(n-2)/4*3*2 <= quicksum(b), name='lb b')
+    model.addConstr(quicksum(b) <= n*(n-1)*(n-2)/4*2 , name='ub b')
     
     model.setObjective(z, GRB.MAXIMIZE)
     
@@ -531,3 +533,5 @@ with open('result.text' , 'w') as file:
 
 for item in result:
     print(item)
+
+
