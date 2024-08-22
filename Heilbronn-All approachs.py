@@ -16,8 +16,7 @@ def heilbronn_triangle_approach1(n,m,ub):
     b = model.addVars(n, n, n, vtype=GRB.BINARY, name="b")
     z = model.addVar(vtype=GRB.CONTINUOUS, name="z", lb=math.log(n)/(n**2), ub=ub)
     point_in_square = model.addVars(m, m, n, vtype=GRB.BINARY, name="point_in_square")
-    point_in_rectangle_x = model.addVars(m, n, vtype=GRB.BINARY, name="point_in_square")
-    point_in_rectangle_y = model.addVars(m, n, vtype=GRB.BINARY, name="point_in_square")
+    c = model.addVars(n, vtype=GRB.BINARY, name="c")
 
     model.update()
     
@@ -32,10 +31,10 @@ def heilbronn_triangle_approach1(n,m,ub):
     for i in range(1,n-1):
         model.addConstr(y[i] <= y[i+1] , name = 'Sort points')
     
-    # for i in range(n):
-    #     model.addConstr(x[i] <= 1- c[i] , name = 'One x zero')
+    for i in range(n):
+         model.addConstr(x[i] <= 1- c[i] , name = 'One x zero')
     
-    # model.addConstr(quicksum(c) == 1)
+    model.addConstr(quicksum(c) == 1)
     
     for i in range(n):
         model.addConstr(w[i,0] == 0)
