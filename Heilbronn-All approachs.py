@@ -31,6 +31,14 @@ def heilbronn_triangle_approach1(n,m,ub):
     for i in range(1,n-1):
         model.addConstr(y[i] <= y[i+1] , name = 'Sort points')
     
+    model.addConstr(y[2] <= 0.83334)
+    model.addConstr(y[2] >= 0.16666)
+    model.addConstr(y[3] <= 0.66667)
+    model.addConstr(y[3] >= 0.16666)
+    model.addConstr(y[4] >= 0.33333)
+    model.addConstr(y[4] <= 0.83334)
+    model.addConstr(y[5] >= 0.33333)
+    
     for i in range(n):
          model.addConstr(x[i] <= 1- c[i] , name = 'One x zero')
     
