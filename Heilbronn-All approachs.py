@@ -189,6 +189,10 @@ def heilbronn_triangle_approach2(n,m,ub,lb,yb):
 
 
     model.update()
+
+    for i in range(2,n-2):
+        y[i].UB= yb[i-2][1]
+        y[i].LB= yb[i-2][0]
     
     model.addConstr(y[0] == 0 , name = 'one point on y=0')
     model.addConstr(y[1] == 0 , name = 'one point on y=0')
@@ -198,9 +202,6 @@ def heilbronn_triangle_approach2(n,m,ub,lb,yb):
     for i in range(1,n-1):
         model.addConstr(y[i] <= y[i+1] , name = 'Sort points')
     
-    for i in range(2,n-2):
-        model.addConstr(y[i] <= yb[i-2][1])
-        model.addConstr(y[i] >= yb[i-2][0])
     
     for i in range(n):
          model.addConstr(x[i] <= 1- c1[i] , name = 'One x zero')
@@ -284,6 +285,10 @@ def heilbronn_triangle_approach3_MILP(n,H,m,ub,lb,yb):
 
     model.update()
 
+    for i in range(2,n-2):
+        y[i].UB= yb[i-2][1]
+        y[i].LB= yb[i-2][0]
+
     # for i in range(n):
     #     for h in range(H):
     #         xi[i, h].BranchPriority = n - i  # Higher priority for smaller i
@@ -294,10 +299,6 @@ def heilbronn_triangle_approach3_MILP(n,H,m,ub,lb,yb):
         model.addConstr(y[i] <= y[i+1] , name = 'Sort points')
         
     model.addConstr(y[n-1] == 1 , name = 'one point on y=1')
-    
-    for i in range(2,n-2):
-        model.addConstr(y[i] <= yb[i-2][1])
-        model.addConstr(y[i] >= yb[i-2][0])
     
     for i in range(n):
         model.addConstr(w[i,0] == 0 , name = 'one point on w=0')
@@ -387,15 +388,15 @@ def heilbronn_triangle_approach3_MIQCP(n,H,m,ub,lb,yb):
     point_in_rectangle = model.addVars(m, n, vtype=GRB.BINARY, name="point_in_square")
 
     model.update()
+
+    for i in range(2,n-2):
+        y[i].UB= yb[i-2][1]
+        y[i].LB= yb[i-2][0]
     
     model.addConstr(y[0] == 0 , name = 'one point on y=0')
     model.addConstr(y[1] == 0 , name = 'one point on y=0')
     for i in range(1,n-1):
         model.addConstr(y[i] <= y[i+1] , name = 'Sort points')
-    
-    for i in range(2,n-2):
-        model.addConstr(y[i] <= yb[i-2][1])
-        model.addConstr(y[i] >= yb[i-2][0])
         
     model.addConstr(y[n-1] == 1 , name = 'one point on y=1')
     
