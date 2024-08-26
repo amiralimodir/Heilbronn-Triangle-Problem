@@ -1,13 +1,10 @@
 import random
 import matplotlib.pyplot as plt
 
-def distance(x1,y1,x2,y2):
-    return ((x1-x2)**2+(y1-y2)**2)**0.5
-
 def mindist(xy,x2,y2):
     mindist=2**0.5
     for (x1,y1) in xy:
-        dist=distance(x1,y1,x2,y2)
+        dist=((x1-x2)**2+(y1-y2)**2)**0.5
         if dist <= mindist:
             mindist = dist
     return mindist
@@ -69,21 +66,27 @@ ansb=[]
 minb=100
 maxb=0
 
-for i in range(10000):
+for i in range(1000000):
     xy=[]
     xy.append((0,random.uniform(0,1)))
     xy.append((1,random.uniform(0,1)))
-    x2=random.uniform(0,1)
 
+    x2=random.uniform(0,1)
     while mindist(xy,x2,0) < 0.167718:
         x2=random.uniform(0,1)
     xy.append((x2,0))
 
+    x2=random.uniform(0,1)
+    while mindist(xy,x2,0) < 0.167718:
+        x2=random.uniform(0,1)
+    xy.append((x2,0))
+
+    x2=random.uniform(0,1)
     while mindist(xy,x2,1) < 0.167718:
         x2=random.uniform(0,1)
     xy.append((x2,1))
 
-    for i in range(3):
+    for i in range(2):
         x2=random.uniform(0,1)
         y2=random.uniform(0,1)
         while mindist(xy,x2,y2) < 0.167718:
