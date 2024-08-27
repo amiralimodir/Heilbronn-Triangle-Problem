@@ -17,3 +17,14 @@ for k in range(n):
             model.addConstr(point_in_square[i, j, k] * (x[k] - (i + 1) * grid_size) <= 0, f"link_x_ub_{i}_{j}_{k}")
             model.addConstr(point_in_square[i, j, k] * (y[k] - j * grid_size) >= 0, f"link_y_lb_{i}_{j}_{k}")
             model.addConstr(point_in_square[i, j, k] * (y[k] - (j + 1) * grid_size) <= 0, f"link_y_ub_{i}_{j}_{k}")
+
+
+d_ij = model.addVars(n, n, vtype=GRB.BINARY, name="d_ij")
+    
+    for i in range(n):
+        for j in range(i + 1, n):
+            model.addConstr(x[j] - x[i] <= d_ij[i, j])
+            model.addConstr(x[i] - x[j] <= 1-d_ij[i, j])
+        
+                model.addConstr(b[i,j,k]+1 >= d_ij[i,j]+(1-d_ij[j,k]))
+                model.addConstr(b[i,j,k] <= d_ij[i,j]+(1-d_ij[j,k]))
