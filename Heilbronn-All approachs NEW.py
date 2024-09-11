@@ -18,7 +18,7 @@ def sort_y(model,y):
     for i in range(1,n-1):
         model.addConstr(y[i] <= y[i+1] , name = 'Sort points')
     
-def distance_points_y_0(model,x):
+def distance_points_y_0(model,x,m):
     model.addConstr(x[1]-x[0] >= 1/(2*m))
 
 def one_point_on_x_0_and_1(model,x,c1,c2):
@@ -132,7 +132,7 @@ def heilbronn_triangle_approach1(n,m,ub,lb,yb):
 
     y_bounds(model,y,yb)
     sort_y(model,y)
-    distance_points_y_0(model,x)
+    distance_points_y_0(model,x,m)
     one_point_on_x_0_and_1(model,x,c1,c2)
     define_w(model,w,x,y)
     one_point_each_squre(model,point_in_square,x,y,m)
@@ -144,10 +144,10 @@ def heilbronn_triangle_approach1(n,m,ub,lb,yb):
         for j in range(i + 1, n):
             for k in range(j + 1, n):
                 model.addConstr(S[i, j, k] == 0.5 * (w[i,j] - w[i,k] + w[j,k] - w[j,i] + w[k,i] - w[k,j]), name=f"S_constr_{i}_{j}_{k}")
-                model.addConstr((1 - b[i, j, k])*(u+0.5) + S[i, j, k] >= z, name=f"linearize1_{i}_{j}_{k}")
-                model.addConstr(b[i, j, k]*(u+0.5) - S[i, j, k] >= z, name=f"linearize2_{i}_{j}_{k}")
-                model.addConstr((-1)/2 <= S[i,j,k]-((1/2+l)*b[i,j,k]))
-                model.addConstr(S[i,j,k]-((1/2+l)*b[i,j,k]) <= -l)
+                model.addConstr((1 - b[i, j, k])*(ub+0.5) + S[i, j, k] >= z, name=f"linearize1_{i}_{j}_{k}")
+                model.addConstr(b[i, j, k]*(ub+0.5) - S[i, j, k] >= z, name=f"linearize2_{i}_{j}_{k}")
+                model.addConstr((-1)/2 <= S[i,j,k]-((1/2+lb)*b[i,j,k]))
+                model.addConstr(S[i,j,k]-((1/2+lb)*b[i,j,k]) <= -lb)
                 model.addConstr(S[i, j, k] <= 0.5*b[i,j,k] , name="upper")
                 model.addConstr(S[i, j, k] >= 0.5*(b[i,j,k]-1) , name="lower")
     
