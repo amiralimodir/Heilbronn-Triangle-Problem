@@ -80,14 +80,14 @@ def one_point_each_squre(model,point_in_square,x,y,m):
                 model.addConstr(point_in_square[i, j, k] * (y[k] - (j + 1) * grid_size) <= 0, f"link_y_ub_{i}_{j}_{k}")
     
     for i in range(m):
-        model.addConstr(quicksum(point_in_square[i,j, k] for k in range(n) for j in range(m)) <= 2, f"Square_{i}_capacity")
+        model.addConstr(quicksum(point_in_square[i,j, k] for k in range(n) for j in range(m)) <= 2, f"recrangle_{i}_capacity")
     
-    for i in range(m):
-        model.addConstr(quicksum(point_in_square[i,j, k] for k in range(n) for j in range(m)) <= 2, f"Square_{i}_capacity")
+    for j in range(m):
+        model.addConstr(quicksum(point_in_square[i,j, k] for k in range(n) for i in range(m)) <= 2, f"rectangle_{i}_capacity")
 
 def one_point_each_rectangle(model,point_in_rectangle,y,m):
     for i in range(m):
-        model.addConstr(quicksum(point_in_rectangle[i, k] for k in range(n)) <= 2, f"Square_{i}_capacity")
+        model.addConstr(quicksum(point_in_rectangle[i, k] for k in range(n)) <= 2, f"rectangle_{i}_capacity")
 
     grid_size = 1.0 / m
 
@@ -376,7 +376,7 @@ def plot_solution(optimal_z, optimal_x, optimal_y):
                     minarea=area
 
     for i in range(n):
-        for j in range(i + 1, n):
+        for j in range(i + 1, n): 
             for k in range(j + 1, n):
                 area =abs( 0.5 * (x[i] * (y[j] - y[k]) + x[j] * (y[k] - y[i]) + x[k] * (y[i] - y[j])) )
                 if(area == minarea):
