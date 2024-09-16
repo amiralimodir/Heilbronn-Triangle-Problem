@@ -82,8 +82,8 @@ def one_point_each_squre(model,point_in_square,x,y,m):
     for i in range(m):
         model.addConstr(quicksum(point_in_square[i,j, k] for k in range(n) for j in range(m)) <= 2, f"recrangle_{i}_capacity")
     
-    for j in range(m):
-        model.addConstr(quicksum(point_in_square[i,j, k] for k in range(n) for i in range(m)) <= 2, f"rectangle_{i}_capacity")
+    # for j in range(m):
+    #     model.addConstr(quicksum(point_in_square[i,j, k] for k in range(n) for i in range(m)) <= 2, f"rectangle_{i}_capacity")
 
 def one_point_each_rectangle(model,point_in_rectangle,y,m):
     for i in range(m):
