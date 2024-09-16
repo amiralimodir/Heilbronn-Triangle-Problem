@@ -138,7 +138,7 @@ def heilbronn_triangle_approach1(n,m,ub,lb,yb):
     one_point_each_squre(model,point_in_square,x,y,m)
     sum_y(model,y)
     sum_x(model,x)
-    sum_b(model,b)
+    #sum_b(model,b)
 
     for i in range(n):
         for j in range(i + 1, n):
