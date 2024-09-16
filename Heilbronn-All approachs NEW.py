@@ -19,7 +19,7 @@ def sort_y(model,y):
         model.addConstr(y[i] <= y[i+1] , name = 'Sort points')
     
 def distance_points_y_0(model,x,m):
-    model.addConstr(x[1]-x[0] >= 1/(2*m))
+    model.addConstr(x[1]-x[0] >= 1/(m))
 
 def one_point_on_x_0_and_1(model,x,c1,c2):
     for i in range(n):
@@ -130,7 +130,7 @@ def heilbronn_triangle_approach1(n,m,ub,lb,yb):
 
     model.update()
 
-    #y_bounds(model,y,yb)
+    y_bounds(model,y,yb)
     sort_y(model,y)
     distance_points_y_0(model,x,m)
     one_point_on_x_0_and_1(model,x,c1,c2)
