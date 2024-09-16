@@ -130,7 +130,7 @@ def heilbronn_triangle_approach1(n,m,ub,lb,yb):
 
     model.update()
 
-    y_bounds(model,y,yb)
+    #y_bounds(model,y,yb)
     sort_y(model,y)
     distance_points_y_0(model,x,m)
     one_point_on_x_0_and_1(model,x,c1,c2)
