@@ -132,18 +132,30 @@ def plot_solution(optimal_z, optimal_x, optimal_y):
     plt.show()
 
 result=[]
-n = int(input('n: '))
-M = int(input('M: '))
-ub = 1/(2*M)
-lb = 0
+b=int(input())
+
+if b==0:
+    n = int(input('n: '))
+    M = int(input('M: '))
+    ub = 1/(2*M)
+    lb = 0
 
 
-optimal_z, optimal_x, optimal_y, optimal_b, optimize_time = heilbronn_triangle_approach1(n,M,ub,lb)
+    optimal_z, optimal_x, optimal_y, optimal_b, optimize_time = heilbronn_triangle_approach1(n,M,ub,lb)
 
-result.append(f"x = {optimal_x}")
-result.append(f"y = {optimal_y}")
-result.append(f"z = {optimal_z}")
-result.append(f"b = {optimal_b}")
-result.append(f"time = {optimize_time}")
-if optimal_x is not None and optimal_y is not None:
-    plot_solution(optimal_z, optimal_x, optimal_y)
+    result.append(f"x = {optimal_x}")
+    result.append(f"y = {optimal_y}")
+    result.append(f"z = {optimal_z}")
+    result.append(f"b = {optimal_b}")
+    result.append(f"time = {optimize_time}")
+    if optimal_x is not None and optimal_y is not None:
+        plot_solution(optimal_z, optimal_x, optimal_y)
+
+else:
+    optimal_z=1
+    for i in range(2,6):
+        n=3
+        while optimal_z >= 0.083859:
+            optimal_z, optimal_x, optimal_y, optimal_b, optimize_time = heilbronn_triangle_approach1(n,i,1/(2*i),0)
+            n+=1
+        print(i , n)
