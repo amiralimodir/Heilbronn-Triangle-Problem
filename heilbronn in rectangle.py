@@ -161,6 +161,7 @@ else:
             n+=1
             optimal_z, optimal_x, optimal_y, optimal_b, optimize_time = heilbronn_triangle_approach1(n,i,1/(2*i),0)
             ans.append((i,n,optimal_z))
-        print('M:',i,', n:',n)
     
-    print(ans)
+    for a in ans:
+        if a[2]<0.083859:
+            print('M:' , a[0] , 'n: ' , a[1]-1)
