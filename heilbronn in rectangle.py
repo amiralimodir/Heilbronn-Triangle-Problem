@@ -152,10 +152,15 @@ if b==0:
         plot_solution(optimal_z, optimal_x, optimal_y)
 
 else:
+    ans=[]
+    
     optimal_z=1
     for i in range(2,6):
         n=3
         while optimal_z >= 0.083859:
             optimal_z, optimal_x, optimal_y, optimal_b, optimize_time = heilbronn_triangle_approach1(n,i,1/(2*i),0)
+            ans.append((i,n,optimal_z))
             n+=1
-        print(i , n)
+        print('M:',i,', n:',n)
+    
+    print(ans)
