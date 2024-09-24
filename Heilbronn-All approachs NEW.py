@@ -101,13 +101,13 @@ def xi_lim(model,xi,H):
         model.addConstr(sum(xi[i,h] for i in range(n)) <= 0.75*n)
         model.addConstr(sum(xi[i,h] for i in range(n)) >= 0.25*n)
 
-def sum_y(model,y):
-    model.addConstr( 1 <= quicksum(y), name='lb y')
-    model.addConstr(quicksum(y) <= n-1, name='ub y')
+# def sum_y(model,y):
+#     model.addConstr( 1 <= quicksum(y), name='lb y')
+#     model.addConstr(quicksum(y) <= n-1, name='ub y')
 
-def sum_x(model,x):
-    model.addConstr(1 <= quicksum(x) , name = 'lb x')
-    model.addConstr(quicksum(x) <= n-1 , name= 'ub x')
+# def sum_x(model,x):
+#     model.addConstr(1 <= quicksum(x) , name = 'lb x')
+#     model.addConstr(quicksum(x) <= n-1 , name= 'ub x')
 
 def sum_b(model,b):
     model.addConstr( (n*(n-1)*(n-2)/(4*3*2)) <= quicksum(b), name='lb b')
@@ -136,8 +136,8 @@ def heilbronn_triangle_approach1(n,m,ub,lb,yb):
     one_point_on_x_0_and_1(model,x,c1,c2)
     define_w(model,w,x,y)
     one_point_each_squre(model,point_in_square,x,y,m)
-    sum_y(model,y)
-    sum_x(model,x)
+    # sum_y(model,y)
+    # sum_x(model,x)
     #sum_b(model,b)
 
     for i in range(n):
@@ -196,8 +196,8 @@ def heilbronn_triangle_approach2(n,m,ub,lb,yb):
     one_point_on_x_0_and_1(model,x,c1,c2)
     define_w(model,w,x,y)
     one_point_each_squre(model,point_in_square,x,y,m)
-    sum_y(model,y)
-    sum_x(model,x)
+    # sum_y(model,y)
+    # sum_x(model,x)
     sum_b(model,b)
 
     for i in range(n):
@@ -257,8 +257,8 @@ def heilbronn_triangle_approach3_MILP(n,H,m,ub,lb,yb):
             model.addConstr(w[i,j] == sum(2**(-h-1) * (phi[i,j,h]) for h in range(H))+ omega[i,j])
     
     one_point_each_rectangle(model,point_in_rectangle,y,m)
-    sum_y(model,y)
-    sum_b(model,b)
+    # sum_y(model,y)
+    # sum_b(model,b)
     xi_lim(model,xi,H)
 
     for i in range(n):
@@ -320,8 +320,8 @@ def heilbronn_triangle_approach3_MIQCP(n,H,m,ub,lb,yb):
             model.addConstr(w[i,j] == sum(2**(-h-1) * (xi[i,h]*y[j]) for h in range(H))+ (ep[i]*y[j]))
     
     one_point_each_rectangle(model,point_in_rectangle,y,m)
-    sum_y(model,y)
-    sum_b(model,b)
+    # sum_y(model,y)
+    # sum_b(model,b)
     xi_lim(model,xi,H)
 
     for i in range(n):
