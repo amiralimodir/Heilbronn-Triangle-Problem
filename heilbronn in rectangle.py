@@ -151,7 +151,7 @@ if b==0:
     if optimal_x is not None and optimal_y is not None:
         plot_solution(optimal_z, optimal_x, optimal_y)
 
-else:
+elif b==1:
     ans=[]
     
     for i in range(2,6):
@@ -165,3 +165,29 @@ else:
     for a in ans:
         if a[2]<0.083859:
             print('M:' , a[0] , 'n: ' , a[1]-1)
+
+
+
+else:
+    lb=float(input('lb:'))
+    N=int(input(N:))
+    ans=[]
+    
+    for n in range(3,N+1):
+        i=1
+        optimal_z=1
+        while optimal_z >= lb:
+            optimal_z, optimal_x, optimal_y, optimal_b, optimize_time = heilbronn_triangle_approach1(n,i,1/(2*i),0)
+            ans.append((i,n,optimal_z))
+            i+=1
+    
+    for a in ans:
+        if a[2]<lb:
+            if a1!=0:
+                print('M:' , a1[0] , '  n:' , a1[1] , '  z:',a1[2])
+            else:
+                print('not place even 3 points')
+            a1=0
+        
+        else:
+            a1=(a[0],a[1],a[2])
