@@ -170,7 +170,7 @@ elif b==1:
 
 else:
     lb=float(input('lb:'))
-    N=int(input(N:))
+    N=int(input('N:'))
     ans=[]
     
     for n in range(3,N+1):
