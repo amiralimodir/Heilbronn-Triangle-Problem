@@ -113,42 +113,38 @@ def sum_b(model,b):
     model.addConstr( (n*(n-1)*(n-2)/(4*3*2)) <= quicksum(b), name='lb b')
     model.addConstr( quicksum(b) <= (n*(n-1)*(n-2)/(4*2)) , name='ub b')
 
+
+
 def heilbronn_triangle_approach3_MILP(n,H,m,ub,lb,yb):
     model = gp.Model("Heilbronn Triangle")
 
-    x = model.addVars(n, vtype=GRB.CONTINUOUS, lb=0, ub=1, name="x")
-    y = model.addVars(n, vtype=GRB.CONTINUOUS, lb=0, ub=1, name="y")
-    w = model.addVars(n, n, lb=0, ub=1, vtype=GRB.CONTINUOUS, name="w")
-    ep = model.addVars(n, vtype=GRB.CONTINUOUS, lb=0, ub=2/H, name="epsilon")
+    w = model.addVars(n,n, vtype=GRB.CONTINUOUS, name="x", lb=0, ub=1)
+    phi = model.addVars(n,n, H, vtype=GRB.CONTINUOUS, name="phi" , lb=0 , ub=1)
     xi = model.addVars(n, H, vtype=GRB.BINARY, name="xi")
-    phi = model.addVars(n, n, H, vtype=GRB.CONTINUOUS, lb=0, ub=1, name="phi")
-    omega = model.addVars(n, n, vtype=GRB.CONTINUOUS, lb=0, ub=2/H, name="omega")
-    z = model.addVar(vtype=GRB.CONTINUOUS, name="z")
-    S = model.addVars(n, n, n, vtype=GRB.CONTINUOUS, lb=-0.5, ub=0.5, name="S")
+    omega = model.addVars(n,n , vtype=GRB.CONTINUOUS, name="omega", lb=0, ub=(2**(-H)))
+    ep = model.addVars(n, vtype=GRB.CONTINUOUS, name="ep", lb=0, ub=(2**(-H)))
+    y = model.addVars(n, vtype=GRB.CONTINUOUS, name="y", lb=0, ub=1)
+    S = model.addVars(n, n, n, vtype=GRB.CONTINUOUS, name="S", lb=-0.5, ub=0.5)
     b = model.addVars(n, n, n, vtype=GRB.BINARY, name="b")
-    point_in_square = model.addVars(m, m, n, vtype=GRB.BINARY, name="point_in_square")
+    z = model.addVar(vtype=GRB.CONTINUOUS, name="z", lb=lb, ub=ub)
+    point_in_rectangle = model.addVars(m, n, vtype=GRB.BINARY, name="point_in_square")
 
     model.update()
 
     y_bounds(model,y,yb)
     sort_y(model,y)
-    define_w(model,w,x,y)
+    sort_w(model,w)
     define_phi(model,xi,phi,y)
     define_omega(model,y,omega,ep,H)
-
+    
     for i in range(n):
-        model.addConstr(x[i] == quicksum((h / 2) * xi[i, h] for h in range(H)) + ep[i])
-        model.addConstr(quicksum(xi[i, h] for h in range(H)) == 1)
+        for j in range(2,n):
+            model.addConstr(w[i,j] == sum(2**(-h-1) * (phi[i,j,h]) for h in range(H))+ omega[i,j])
     
-    # for i in range(n):
-    #     for j in range(2,n):
-    #         model.addConstr(w[i,j] == sum(2**(-h-1) * (phi[i,j,h]) for h in range(H))+ omega[i,j])
-    
-    one_point_each_squre(model,point_in_square,x,y,m)
-    #one_point_each_rectangle(model,point_in_rectangle,y,m)
+    one_point_each_rectangle(model,point_in_rectangle,y,m)
     # sum_y(model,y)
     # sum_b(model,b)
-    #xi_lim(model,xi,H)
+    xi_lim(model,xi,H)
 
     for i in range(n):
         for j in range(i + 1, n):
@@ -156,8 +152,6 @@ def heilbronn_triangle_approach3_MILP(n,H,m,ub,lb,yb):
                 model.addConstr(S[i, j, k] == 0.5 * (w[i,j] - w[i,k] + w[j,k] - w[j,i] + w[k,i] - w[k,j]), name=f"S_constr_{i}_{j}_{k}")
                 model.addConstr((1 - b[i, j, k])*(ub+0.5) + S[i, j, k] >= z, name=f"linearize1_{i}_{j}_{k}")
                 model.addConstr(b[i, j, k]*(ub+0.5) - S[i, j, k] >= z, name=f"linearize2_{i}_{j}_{k}")
-                model.addConstr((-1)/2 <= S[i,j,k]-((1/2+lb)*b[i,j,k]))
-                model.addConstr(S[i,j,k]-((1/2+lb)*b[i,j,k]) <= -lb)
                 model.addConstr(S[i, j, k] <= 0.5*b[i,j,k] , name="upper")
                 model.addConstr(S[i, j, k] >= 0.5*(b[i,j,k]-1) , name="lower")
     
@@ -166,6 +160,11 @@ def heilbronn_triangle_approach3_MILP(n,H,m,ub,lb,yb):
     #model.setParam('MIPGapAbs', 0.01)
     #model.setParam('FeasibilityTol', 1e-6)
     #model.setParam('IntFeasTol', 1e-6)
+
+    model.setParam('Method', 1)
+    model.setParam('MIPFocus', 1)
+    model.setParam('Cuts', 2)
+    model.setParam('Heuristics', 0.5)
     
     start_time= time.time() 
     model.optimize()
@@ -229,6 +228,10 @@ def heilbronn_triangle_approach3_MIQCP(n,H,m,ub,lb,yb):
     #model.setParam('MIPGapAbs', 0.01)
     #model.setParam('FeasibilityTol', 1e-6)
     #model.setParam('IntFeasTol', 1e-6)
+
+    model.setParam('NonConvex', 2)
+    model.setParam('Method', 2)
+    model.setParam('MIQCPMethod', 0)
     
     start_time= time.time() 
     model.optimize()
@@ -302,7 +305,6 @@ ub = float(input('Upper bound ? '))
 lb = float(input('Lower bound ? '))
 if lb == 0:
     lb=math.log(n)/(n**2)
-approach = int(input('Approach? '))
 
 ML=[4,6,7,10,11]
 if n>=6 and n<=10:
@@ -331,10 +333,5 @@ result.append(f"ep = {optimal_ep}")
 result.append(f"time = {optimize_time}")
 if optimal_x is not None and optimal_y is not None:
     plot_solution(optimal_z, optimal_x, optimal_y)
-
-
-
-
-
 
 
