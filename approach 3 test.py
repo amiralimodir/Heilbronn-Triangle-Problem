@@ -167,6 +167,9 @@ def heilbronn_triangle_approach3_MILP(n,H,m,ub,lb,yb):
     model.setParam('Heuristics', 0.5)
     
     start_time= time.time() 
+    model.update()
+    print(f"Quadratic constraints: {model.NumQConstrs}")
+    model.printStats()
     model.optimize()
     optimize_time= time.time() - start_time
     
@@ -234,6 +237,9 @@ def heilbronn_triangle_approach3_MIQCP(n,H,m,ub,lb,yb):
     model.setParam('MIQCPMethod', 0)
     
     start_time= time.time() 
+    model.update()
+    print(f"Quadratic constraints: {model.NumQConstrs}")
+    model.printStats()
     model.optimize()
     optimize_time= time.time() - start_time
     
