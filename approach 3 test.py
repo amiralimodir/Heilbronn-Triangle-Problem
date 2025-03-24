@@ -5,6 +5,31 @@ import time
 import math
 
 
+def my_callback(model, where):
+    if where == GRB.Callback.MIPNODE:
+        rel_gap = model.cbGet(GRB.Callback.MIPNODE_OBJBST)
+        bound = model.cbGet(GRB.Callback.MIPNODE_OBJBND)
+        if bound != 0:
+            rel_gap = abs((bound - rel_gap) / bound)
+        else:
+            rel_gap = float("inf")
+
+        if rel_gap == 0.99:
+            x_vals = [model.cbGetNodeRel(model.getVarByName(f"x[{i},{n-1}]")) for i in range(n)]
+            y_vals = [model.cbGetNodeRel(model.getVarByName(f"y[{i}]")) for i in range(n)]
+            z_val = model.cbGetNodeRel(model.getVarByName("z"))
+            
+            print(f"Solution with gap {rel_gap*100:.2f}%: z = {z_val}")
+            print(f"x: {x_vals}")
+            print(f"y: {y_vals}")
+            
+            result.append(f"Gap: {rel_gap*100:.2f}%")
+            result.append(f"Intermediate z: {z_val}")
+            result.append(f"Intermediate x: {x_vals}")
+            result.append(f"Intermediate y: {y_vals}")
+    elif where == GRB.Callback.MIPSOL:
+        pass
+
 def y_bounds(model,y,yb):
     for i in range(2,n-2):
         y[i].UB= yb[i-2][1]
@@ -170,7 +195,7 @@ def heilbronn_triangle_approach3_MILP(n,H,m,ub,lb,yb):
     model.update()
     print(f"Quadratic constraints: {model.NumQConstrs}")
     model.printStats()
-    model.optimize()
+    model.optimize(my_callback)
     optimize_time= time.time() - start_time
     
     if model.status == GRB.OPTIMAL:
