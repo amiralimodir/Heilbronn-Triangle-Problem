@@ -141,7 +141,7 @@ def heilbronn_triangle_approach3_MILP(n,H,m,ub,lb,yb):
         for j in range(2,n):
             model.addConstr(w[i,j] == sum(2**(-h-1) * (phi[i,j,h]) for h in range(H))+ omega[i,j])
     
-    one_point_each_rectangle(model,point_in_rectangle,y,m)
+    #one_point_each_rectangle(model,point_in_rectangle,y,m)
     # sum_y(model,y)
     # sum_b(model,b)
     xi_lim(model,xi,H)
