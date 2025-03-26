@@ -47,13 +47,23 @@ def heilbronn_triangle_approach3_MILP(n, H, m, ub, lb, yb):
     model.sort_w = Constraint(model.i, model.j, rule=sort_w_rule)
 
     # Define phi constraints
-    def define_phi_rule(model, i, j, h):
-        return (model.phi[i, j, h] <= model.xi[i, h],
-                model.phi[i, j, h] <= model.y[j],
-                model.phi[i, j, h] >= model.y[j] + (model.xi[i, h] - 1),
-                model.phi[i, j, h] >= 0)
-    model.define_phi = Constraint(model.i, model.j, model.h, rule=define_phi_rule)
+    def define_phi_rule_upper_xi(model, i, j, h):
+        return model.phi[i, j, h] <= model.xi[i, h]
 
+    def define_phi_rule_upper_y(model, i, j, h):
+        return model.phi[i, j, h] <= model.y[j]
+
+    def define_phi_rule_lower_y_xi(model, i, j, h):
+        return model.phi[i, j, h] >= model.y[j] + (model.xi[i, h] - 1)
+
+    def define_phi_rule_nonnegativity(model, i, j, h):
+        return model.phi[i, j, h] >= 0
+
+    model.define_phi_upper_xi = Constraint(model.i, model.j, model.h, rule=define_phi_rule_upper_xi)
+    model.define_phi_upper_y = Constraint(model.i, model.j, model.h, rule=define_phi_rule_upper_y)
+    model.define_phi_lower_y_xi = Constraint(model.i, model.j, model.h, rule=define_phi_rule_lower_y_xi)
+    model.define_phi_nonnegativity = Constraint(model.i, model.j, model.h, rule=define_phi_rule_nonnegativity)
+    
     # Define omega constraints
     def define_omega_rule(model, i, j):
         return (model.omega[i, j] >= 0,
