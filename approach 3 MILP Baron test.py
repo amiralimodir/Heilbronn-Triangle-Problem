@@ -63,14 +63,24 @@ def heilbronn_triangle_approach3_MILP(n, H, m, ub, lb, yb):
     model.define_phi_upper_y = Constraint(model.i, model.j, model.h, rule=define_phi_rule_upper_y)
     model.define_phi_lower_y_xi = Constraint(model.i, model.j, model.h, rule=define_phi_rule_lower_y_xi)
     model.define_phi_nonnegativity = Constraint(model.i, model.j, model.h, rule=define_phi_rule_nonnegativity)
-    
+
     # Define omega constraints
-    def define_omega_rule(model, i, j):
-        return (model.omega[i, j] >= 0,
-                model.omega[i, j] >= (2**(-H)) * model.y[j] + model.ep[i] - (2**(-H)),
-                model.omega[i, j] <= (2**(-H)) * model.y[j],
-                model.omega[i, j] <= model.ep[i])
-    model.define_omega = Constraint(model.i, model.j, rule=define_omega_rule)
+    def define_omega_rule_lower_bound(model, i, j):
+        return model.omega[i, j] >= 0
+
+    def define_omega_rule_first_lower_bound(model, i, j):
+        return model.omega[i, j] >= (2**(-H)) * model.y[j] + model.ep[i] - (2**(-H))
+
+    def define_omega_rule_upper_bound_y(model, i, j):
+        return model.omega[i, j] <= (2**(-H)) * model.y[j]
+
+    def define_omega_rule_upper_bound_ep(model, i, j):
+        return model.omega[i, j] <= model.ep[i]
+
+    model.define_omega_lower_bound = Constraint(model.i, model.j, rule=define_omega_rule_lower_bound)
+    model.define_omega_first_lower_bound = Constraint(model.i, model.j, rule=define_omega_rule_first_lower_bound)
+    model.define_omega_upper_bound_y = Constraint(model.i, model.j, rule=define_omega_rule_upper_bound_y)
+    model.define_omega_upper_bound_ep = Constraint(model.i, model.j, rule=define_omega_rule_upper_bound_ep)
 
     # Limits on xi
     def xi_lim_rule(model, h):
