@@ -1,0 +1,61 @@
+n: 7
+Upper bound ? 0.1
+Lower bound ? 0
+H : 5n: 7
+Upper bound ? 0.1
+Lower bound ? 0
+H : 5
+ERROR: Rule failed when generating expression for Constraint define_phi with
+    index (1, 1, 1): ValueError: Constraint 'define_phi[1,1,1]' does not have
+    a proper value. Found a tuple of length 4. Expecting a tuple of length 2
+    or 3:
+        Equality:   (left, right) Inequality: (lower, expression, upper)
+ERROR: Constructing component 'define_phi' from data=None failed: ValueError:
+    Constraint 'define_phi[1,1,1]' does not have a proper value. Found a tuple
+    of length 4. Expecting a tuple of length 2 or 3:
+        Equality:   (left, right) Inequality: (lower, expression, upper)
+Traceback (most recent call last):
+  File "c:/Users/BK-FENS-1/Downloads/approach 3 MILP Baron test.py", line 164, in <module>
+    optimal_z, optimal_x, optimal_y, optimal_b, optimal_ep = heilbronn_triangle_approach3_MILP(n, H, M, ub, lb, yb)
+  File "c:/Users/BK-FENS-1/Downloads/approach 3 MILP Baron test.py", line 55, in heilbronn_triangle_approach3_MILP
+    model.define_phi = Constraint(model.i, model.j, model.h, rule=define_phi_rule)
+  File "C:\Users\BK-FENS-1\Anaconda3\lib\site-packages\pyomo\core\base\block.py", line 542, in __setattr__
+    self.add_component(name, val)
+  File "C:\Users\BK-FENS-1\Anaconda3\lib\site-packages\pyomo\core\base\block.py", line 1087, in add_component
+    val.construct(data)
+  File "C:\Users\BK-FENS-1\Anaconda3\lib\site-packages\pyomo\core\base\constraint.py", line 748, in construct
+    self._setitem_when_not_present(index, rule(block, index))
+  File "C:\Users\BK-FENS-1\Anaconda3\lib\site-packages\pyomo\core\base\indexed_component.py", line 996, in _setitem_when_not_present      
+    obj.set_value(value)
+  File "C:\Users\BK-FENS-1\Anaconda3\lib\site-packages\pyomo\core\base\constraint.py", line 492, in set_value
+    raise ValueError(
+ValueError: Constraint 'define_phi[1,1,1]' does not have a proper value. Found a tuple of length 4. Expecting a tuple of length 2 or 3:   
+    Equality:   (left, right)
+    Inequality: (lower, expression, upper)
+ERROR: Rule failed when generating expression for Constraint define_phi with
+    index (1, 1, 1): ValueError: Constraint 'define_phi[1,1,1]' does not have
+    a proper value. Found a tuple of length 4. Expecting a tuple of length 2
+    or 3:
+        Equality:   (left, right) Inequality: (lower, expression, upper)
+ERROR: Constructing component 'define_phi' from data=None failed: ValueError:
+    Constraint 'define_phi[1,1,1]' does not have a proper value. Found a tuple
+    of length 4. Expecting a tuple of length 2 or 3:
+        Equality:   (left, right) Inequality: (lower, expression, upper)
+Traceback (most recent call last):
+  File "c:/Users/BK-FENS-1/Downloads/approach 3 MILP Baron test.py", line 164, in <module>
+    optimal_z, optimal_x, optimal_y, optimal_b, optimal_ep = heilbronn_triangle_approach3_MILP(n, H, M, ub, lb, yb)
+  File "c:/Users/BK-FENS-1/Downloads/approach 3 MILP Baron test.py", line 55, in heilbronn_triangle_approach3_MILP
+    model.define_phi = Constraint(model.i, model.j, model.h, rule=define_phi_rule)
+  File "C:\Users\BK-FENS-1\Anaconda3\lib\site-packages\pyomo\core\base\block.py", line 542, in __setattr__
+    self.add_component(name, val)
+  File "C:\Users\BK-FENS-1\Anaconda3\lib\site-packages\pyomo\core\base\block.py", line 1087, in add_component
+    val.construct(data)
+  File "C:\Users\BK-FENS-1\Anaconda3\lib\site-packages\pyomo\core\base\constraint.py", line 748, in construct
+    self._setitem_when_not_present(index, rule(block, index))
+  File "C:\Users\BK-FENS-1\Anaconda3\lib\site-packages\pyomo\core\base\indexed_component.py", line 996, in _setitem_when_not_present      
+    obj.set_value(value)
+  File "C:\Users\BK-FENS-1\Anaconda3\lib\site-packages\pyomo\core\base\constraint.py", line 492, in set_value
+    raise ValueError(
+ValueError: Constraint 'define_phi[1,1,1]' does not have a proper value. Found a tuple of length 4. Expecting a tuple of length 2 or 3:   
+    Equality:   (left, right)
+    Inequality: (lower, expression, upper)
