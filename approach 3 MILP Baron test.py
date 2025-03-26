@@ -55,6 +55,7 @@ def heilbronn_triangle_approach3_MILP(n, H, m, ub, lb, yb):
 
     def define_phi_rule_lower_y_xi(model, i, j, h):
         return model.phi[i, j, h] >= model.y[j] + (model.xi[i, h] - 1)
+    #khar
 
     def define_phi_rule_nonnegativity(model, i, j, h):
         return model.phi[i, j, h] >= 0
