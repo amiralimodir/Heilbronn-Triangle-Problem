@@ -19,32 +19,72 @@ def heilbronn_triangle_approach3_MILP(n, H, m, ub, lb, yb):
     model.xi = Var(model.i, model.h, domain=Binary)
     model.omega = Var(model.i, model.j, bounds=(0, 2**(-H)), domain=Reals)
     model.ep = Var(model.i, bounds=(0, 2**(-H)), domain=Reals)
-    model.y = Var(model.i, bounds=(0, 1), domain=Reals)
+    model.y = Var(model.j, bounds=(0, 1), domain=Reals)
     model.S = Var(model.i, model.j, model.k, bounds=(-0.5, 0.5), domain=Reals)
     model.b = Var(model.i, model.j, model.k, domain=Binary)
     model.z = Var(bounds=(lb, ub), domain=Reals)
 
     # Constraints
     # Bounds on y
-    def y_bounds_rule(model, i):
-        if i > 2 and i < n - 2:
-            return model.y[i] >= yb[i - 2][0], model.y[i] <= yb[i - 2][1]
+    def y_bounds_lower_rule(model, j):
+        if j > 2 and j < n - 2:
+            return model.y[j] >= yb[j - 2][0]
         return Constraint.Skip
-    model.y_bounds = Constraint(model.i, rule=y_bounds_rule)
+
+    def y_bounds_upper_rule(model, j):
+        if j >= 2 and j < n - 2:
+            return model.y[j] <= yb[j - 2][1]
+        return Constraint.Skip
+
+    model.y_bounds_lower = Constraint(model.j, rule=y_bounds_lower_rule)
+    model.y_bounds_upper = Constraint(model.j, rule=y_bounds_upper_rule)
 
     # Sorting constraints for y
-    def sort_y_rule(model, i):
-        if i < n:
-            return model.y[i] <= model.y[i + 1]
+    def sort_y_rule(model, j):
+        if j < n:
+            return model.y[j] <= model.y[j + 1]
         return Constraint.Skip
-    model.sort_y = Constraint(model.i, rule=sort_y_rule)
+    
+    def y_0_rule(model, j):
+        if j==0:
+            return model.y[j] == 0
+        return Constraint.Skip
+    
+    def y_1_rule(model, j):
+        if j==1:
+            return model.y[j] == 0
+        return Constraint.Skip
+
+    def y_n_rule(model, j):
+        if j==n-1:
+            return model.y[j] == 1
+        return Constraint.Skip
+    
+    model.sort_y = Constraint(model.j, rule=sort_y_rule)
+    model.y_0 = Constraint(model.j, rule=y_0_rule)
+    model.y_1 = Constraint(model.j, rule=y_1_rule)
+    model.y_n = Constraint(model.j, rule=y_n_rule)
 
     # Sorting constraints for w
     def sort_w_rule(model, i, j):
         if j > 2 and j < n - 1:
             return model.w[i, j - 1] <= model.w[i, j]
         return Constraint.Skip
+
+    def w_i_0_rule(model, i, j):
+        if j==0:
+            return model.w[i, j] == 0
+        return Constraint.Skip
+    
+    def w_i_1_rule(model, i, j):
+        if j==1:
+            return model.w[i, j] == 0
+        return Constraint.Skip
+
     model.sort_w = Constraint(model.i, model.j, rule=sort_w_rule)
+    model.w_i_0 = Constraint(model.i, model.j, rule=w_i_0_rule)
+    model.w_i_1 = Constraint(model.i, model.j, rule=w_i_1_rule)
+
 
     # Define phi constraints
     def define_phi_rule_upper_xi(model, i, j, h):
@@ -83,21 +123,53 @@ def heilbronn_triangle_approach3_MILP(n, H, m, ub, lb, yb):
     model.define_omega_upper_bound_ep = Constraint(model.i, model.j, rule=define_omega_rule_upper_bound_ep)
 
     # Limits on xi
-    def xi_lim_rule(model, h):
-        return (sum(model.xi[i, h] for i in model.i) <= 0.75 * n,
-                sum(model.xi[i, h] for i in model.i) >= 0.25 * n)
-    model.xi_lim = Constraint(model.h, rule=xi_lim_rule)
+    def xi_lim_rule_upper(model, h):
+        return sum(model.xi[i, h] for i in model.i) <= 0.75 * n
+
+    def xi_lim_rule_lower(model, h):
+        return sum(model.xi[i, h] for i in model.i) >= 0.25 * n
+
+    model.xi_lim_upper = Constraint(model.h, rule=xi_lim_rule_upper)
+    model.xi_lim_lower = Constraint(model.h, rule=xi_lim_rule_lower)
+
+    # Define w
+    def w_definition_rule(model, i, j):
+        return model.w[i, j] == sum(2**(-h-1) * model.phi[i, j, h] for h in model.h) + model.omega[i, j]
+
+    model.w_definition = Constraint(model.i, model.j, rule=w_definition_rule)
 
     # Triangle area constraints
-    def triangle_constraints_rule(model, i, j, k):
+    def triangle_area_rule(model, i, j, k):
         if i < j and j < k:
-            return (model.S[i, j, k] == 0.5 * (model.w[i, j] - model.w[i, k] + model.w[j, k] - model.w[j, i] + model.w[k, i] - model.w[k, j]),
-                    (1 - model.b[i, j, k]) * (ub + 0.5) + model.S[i, j, k] >= model.z,
-                    model.b[i, j, k] * (ub + 0.5) - model.S[i, j, k] >= model.z,
-                    model.S[i, j, k] <= 0.5 * model.b[i, j, k],
-                    model.S[i, j, k] >= 0.5 * (model.b[i, j, k] - 1))
+            return model.S[i, j, k] == 0.5 * (
+                model.w[i, j] - model.w[i, k] + model.w[j, k] - model.w[j, i] + model.w[k, i] - model.w[k, j])
         return Constraint.Skip
-    model.triangle_constraints = Constraint(model.i, model.j, model.k, rule=triangle_constraints_rule)
+
+    def triangle_area_linearize_1_rule(model, i, j, k):
+        if i < j and j < k:
+            return (1 - model.b[i, j, k]) * (ub + 0.5) + model.S[i, j, k] >= model.z
+        return Constraint.Skip
+
+    def triangle_area_linearize_2_rule(model, i, j, k):
+        if i < j and j < k:
+            return model.b[i, j, k] * (ub + 0.5) - model.S[i, j, k] >= model.z
+        return Constraint.Skip
+
+    def triangle_area_upper_bound_rule(model, i, j, k):
+        if i < j and j < k:
+            return model.S[i, j, k] <= 0.5 * model.b[i, j, k]
+        return Constraint.Skip
+
+    def triangle_area_lower_bound_rule(model, i, j, k):
+        if i < j and j < k:
+            return model.S[i, j, k] >= 0.5 * (model.b[i, j, k] - 1)
+        return Constraint.Skip
+
+    model.triangle_area = Constraint(model.i, model.j, model.k, rule=triangle_area_rule)
+    model.triangle_area_linearize_1 = Constraint(model.i, model.j, model.k, rule=triangle_area_linearize_1_rule)
+    model.triangle_area_linearize_2 = Constraint(model.i, model.j, model.k, rule=triangle_area_linearize_2_rule)
+    model.triangle_area_upper_bound = Constraint(model.i, model.j, model.k, rule=triangle_area_upper_bound_rule)
+    model.triangle_area_lower_bound = Constraint(model.i, model.j, model.k, rule=triangle_area_lower_bound_rule)
 
     # Objective function
     model.objective = Objective(expr=model.z, sense=maximize)
