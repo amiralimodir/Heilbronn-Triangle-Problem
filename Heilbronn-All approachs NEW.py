@@ -114,6 +114,48 @@ def sum_b(model,b):
     model.addConstr( quicksum(b) <= (n*(n-1)*(n-2)/(4*2)) , name='ub b')
 
 
+def add_corner_triangle_constraints(model, n, x, y, lb):
+    lower_bound = (lb*2)**0.5
+
+    triangles = [
+        {"name": "bottom_left", "vertices": [(0, 0), (0, lower_bound), (lower_bound, 0)]},
+        {"name": "bottom_right", "vertices": [(1, 0), (1 - lower_bound, 0), (1, lower_bound)]},
+        {"name": "top_left", "vertices": [(0, 1), (0, 1 - lower_bound), (lower_bound, 1)]},
+        {"name": "top_right", "vertices": [(1, 1), (1 - lower_bound, 1), (1, 1 - lower_bound)]}
+    ]
+
+    point_in_triangle = model.addVars(len(triangles), n, vtype=GRB.BINARY, name="point_in_triangle")
+
+    for t_idx, triangle in enumerate(triangles):
+        vertices = triangle["vertices"]
+        x1, y1 = vertices[0]
+        x2, y2 = vertices[1]
+        x3, y3 = vertices[2]
+
+        model.addConstr(
+            quicksum(point_in_triangle[t_idx, k] for k in range(n)) <= 2,
+            name=f"max_points_in_{triangle['name']}_triangle"
+        )
+
+        for k in range(n):
+            model.addConstr(
+                point_in_triangle[t_idx, k] * (x[k] * (y2 - y3) + x2 * (y3 - y1) + x3 * (y1 - y2) -
+                                               y[k] * (x2 - x3) - y2 * (x3 - x1) - y3 * (x1 - x2)) >= 0,
+                name=f"point_in_{triangle['name']}_triangle_{k}_constraint1"
+            )
+            model.addConstr(
+                point_in_triangle[t_idx, k] * (x[k] * (y3 - y1) + x3 * (y1 - y2) + x1 * (y2 - y3) -
+                                               y[k] * (x3 - x1) - y3 * (x1 - x2) - y1 * (x2 - x3)) >= 0,
+                name=f"point_in_{triangle['name']}_triangle_{k}_constraint2"
+            )
+            model.addConstr(
+                point_in_triangle[t_idx, k] * (x[k] * (y1 - y2) + x1 * (y2 - y3) + x2 * (y3 - y1) -
+                                               y[k] * (x1 - x2) - y1 * (x2 - x3) - y2 * (x3 - x1)) >= 0,
+                name=f"point_in_{triangle['name']}_triangle_{k}_constraint3"
+            )
+
+    return model
+
 
 def heilbronn_triangle_approach1(n,m,ub,lb,yb):
     model = gp.Model("Heilbronn Triangle")
@@ -139,6 +181,7 @@ def heilbronn_triangle_approach1(n,m,ub,lb,yb):
     # sum_y(model,y)
     # sum_x(model,x)
     #sum_b(model,b)
+    add_corner_triangle_constraints(model,n,x,y,lb)
 
     for i in range(n):
         for j in range(i + 1, n):
@@ -461,8 +504,6 @@ elif approach == 3:
     result.append(f"time = {optimize_time}")
     if optimal_x is not None and optimal_y is not None:
         plot_solution(optimal_z, optimal_x, optimal_y)
-
-
 
 
 
