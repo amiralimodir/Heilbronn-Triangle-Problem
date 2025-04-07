@@ -191,8 +191,8 @@ def heilbronn_triangle_approach1(n,m,ub,lb,yb):
                 model.addConstr(b[i, j, k]*(ub+0.5) - S[i, j, k] >= z, name=f"linearize2_{i}_{j}_{k}")
                 model.addConstr((-1)/2 <= S[i,j,k]-((1/2+lb)*b[i,j,k]))
                 model.addConstr(S[i,j,k]-((1/2+lb)*b[i,j,k]) <= -lb)
-                model.addConstr(S[i, j, k] <= 0.5*b[i,j,k] , name="upper")
-                model.addConstr(S[i, j, k] >= 0.5*(b[i,j,k]-1) , name="lower")
+                # model.addConstr(S[i, j, k] <= 0.5*b[i,j,k] , name="upper")
+                # model.addConstr(S[i, j, k] >= 0.5*(b[i,j,k]-1) , name="lower")
     
     model.setObjective(z, GRB.MAXIMIZE)
     #model.setParam('MIPGap', 1e-6)
