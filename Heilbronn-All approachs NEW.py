@@ -26,8 +26,8 @@ def one_point_on_x_0_and_1(model,x,c1,c2):
          model.addConstr(x[i] <= 1- c1[i] , name = 'One x zero')
          model.addConstr(x[i] >= c2[i] , name = 'One x 1')
          
-    model.addConstr(quicksum(c1) == 1)
-    model.addConstr(quicksum(c2) == 1)
+    model.addConstr(quicksum(c1) >= 1)
+    model.addConstr(quicksum(c2) >= 1)
 
 def define_w(model,w,x,y):
     for i in range(n):
@@ -85,16 +85,32 @@ def one_point_each_squre(model,point_in_square,x,y,m):
     # for j in range(m):
     #     model.addConstr(quicksum(point_in_square[i,j, k] for k in range(n) for i in range(m)) <= 2, f"rectangle_{i}_capacity")
 
-def one_point_each_rectangle(model,point_in_rectangle,y,m):
+def one_point_each_rectangle(model,point_in_rectangle,y,lb):
+
+    grid_size = lb / 2
+    grid_sum = 0
+    last_grid = 0
+    m=0
+
     for i in range(m):
         model.addConstr(quicksum(point_in_rectangle[i, k] for k in range(n)) <= 2, f"rectangle_{i}_capacity")
 
-    grid_size = 1.0 / m
+    for i in range(50):
+        if grid_sum>=1:
+            grid_sum -= grid_size
+            last_grid = 1 - grid_sum
+            break
+        grid_sum += grid_size
+        m+=1
 
     for k in range(n):
         for j in range(m):
-            model.addConstr(point_in_rectangle[j, k] * (y[k] - j * grid_size) >= 0, f"link_y_lb_{j}_{k}")
-            model.addConstr(point_in_rectangle[j, k] * (y[k] - (j + 1) * grid_size) <= 0, f"link_y_ub_{j}_{k}")
+            if j != m-1:
+                model.addConstr(point_in_rectangle[j, k] * (y[k] - j * grid_size) >= 0, f"link_y_lb_{j}_{k}")
+                model.addConstr(point_in_rectangle[j, k] * (y[k] - (j + 1) * grid_size) <= 0, f"link_y_ub_{j}_{k}")
+            else:
+                model.addConstr(point_in_rectangle[j, k] * (y[k] - j * last_grid) >= 0, f"link_y_lb_{j}_{k}")
+                model.addConstr(point_in_rectangle[j, k] * (y[k] - (j + 1) * last_grid) <= 0, f"link_y_ub_{j}_{k}")                
 
 def xi_lim(model,xi,H):
     for h in range(H):
@@ -166,7 +182,7 @@ def heilbronn_triangle_approach1(n,m,ub,lb,yb):
     S = model.addVars(n, n, n, vtype=GRB.CONTINUOUS, name="S", lb=-0.5, ub=0.5)
     b = model.addVars(n, n, n, vtype=GRB.BINARY, name="b")
     z = model.addVar(vtype=GRB.CONTINUOUS, name="z", lb=lb, ub=ub)
-    point_in_square = model.addVars(m, m, n, vtype=GRB.BINARY, name="point_in_square")
+    point_in_rectangle = model.addVars(m, n, vtype=GRB.BINARY, name="point_in_square")
     c1 = model.addVars(n, vtype=GRB.BINARY, name="c1")
     c2 = model.addVars(n, vtype=GRB.BINARY, name="c2")
 
@@ -177,7 +193,7 @@ def heilbronn_triangle_approach1(n,m,ub,lb,yb):
     distance_points_y_0(model,x,m)
     one_point_on_x_0_and_1(model,x,c1,c2)
     define_w(model,w,x,y)
-    one_point_each_squre(model,point_in_square,x,y,m)
+    one_point_each_rectangle(model,point_in_rectangle,y,lb)
     # sum_y(model,y)
     # sum_x(model,x)
     #sum_b(model,b)
@@ -189,8 +205,8 @@ def heilbronn_triangle_approach1(n,m,ub,lb,yb):
                 model.addConstr(S[i, j, k] == 0.5 * (w[i,j] - w[i,k] + w[j,k] - w[j,i] + w[k,i] - w[k,j]), name=f"S_constr_{i}_{j}_{k}")
                 model.addConstr((1 - b[i, j, k])*(ub+0.5) + S[i, j, k] >= z, name=f"linearize1_{i}_{j}_{k}")
                 model.addConstr(b[i, j, k]*(ub+0.5) - S[i, j, k] >= z, name=f"linearize2_{i}_{j}_{k}")
-                model.addConstr((-1)/2 <= S[i,j,k]-((1/2+lb)*b[i,j,k]))
-                model.addConstr(S[i,j,k]-((1/2+lb)*b[i,j,k]) <= -lb)
+                model.addConstr((-ub) <= S[i,j,k]-((ub+lb)*b[i,j,k]))
+                model.addConstr(S[i,j,k]-((ub+lb)*b[i,j,k]) <= -lb)
                 # model.addConstr(S[i, j, k] <= 0.5*b[i,j,k] , name="upper")
                 # model.addConstr(S[i, j, k] >= 0.5*(b[i,j,k]-1) , name="lower")
     
@@ -238,7 +254,7 @@ def heilbronn_triangle_approach2(n,m,ub,lb,yb):
     distance_points_y_0(model,x)
     one_point_on_x_0_and_1(model,x,c1,c2)
     define_w(model,w,x,y)
-    one_point_each_squre(model,point_in_square,x,y,m)
+    # one_point_each_squre(model,point_in_square,x,y,m)
     # sum_y(model,y)
     # sum_x(model,x)
     sum_b(model,b)
@@ -289,7 +305,7 @@ def heilbronn_triangle_approach3_MILP(n,H,m,ub,lb,yb):
 
     model.update()
 
-    y_bounds(model,y,yb)
+    # y_bounds(model,y,yb)
     sort_y(model,y)
     sort_w(model,w)
     define_phi(model,xi,phi,y)
@@ -299,7 +315,7 @@ def heilbronn_triangle_approach3_MILP(n,H,m,ub,lb,yb):
         for j in range(2,n):
             model.addConstr(w[i,j] == sum(2**(-h-1) * (phi[i,j,h]) for h in range(H))+ omega[i,j])
     
-    one_point_each_rectangle(model,point_in_rectangle,y,m)
+    one_point_each_rectangle(model,point_in_rectangle,y,lb)
     # sum_y(model,y)
     # sum_b(model,b)
     xi_lim(model,xi,H)
@@ -310,8 +326,10 @@ def heilbronn_triangle_approach3_MILP(n,H,m,ub,lb,yb):
                 model.addConstr(S[i, j, k] == 0.5 * (w[i,j] - w[i,k] + w[j,k] - w[j,i] + w[k,i] - w[k,j]), name=f"S_constr_{i}_{j}_{k}")
                 model.addConstr((1 - b[i, j, k])*(ub+0.5) + S[i, j, k] >= z, name=f"linearize1_{i}_{j}_{k}")
                 model.addConstr(b[i, j, k]*(ub+0.5) - S[i, j, k] >= z, name=f"linearize2_{i}_{j}_{k}")
-                model.addConstr(S[i, j, k] <= 0.5*b[i,j,k] , name="upper")
-                model.addConstr(S[i, j, k] >= 0.5*(b[i,j,k]-1) , name="lower")
+                model.addConstr((-ub) <= S[i,j,k]-((ub+lb)*b[i,j,k]))
+                model.addConstr(S[i,j,k]-((ub+lb)*b[i,j,k]) <= -lb)
+                # model.addConstr(S[i, j, k] <= 0.5*b[i,j,k] , name="upper")
+                # model.addConstr(S[i, j, k] >= 0.5*(b[i,j,k]-1) , name="lower")
     
     model.setObjective(z, GRB.MAXIMIZE)
     #model.setParam('MIPGap', 1e-6)
@@ -353,7 +371,7 @@ def heilbronn_triangle_approach3_MIQCP(n,H,m,ub,lb,yb):
 
     model.update()
 
-    y_bounds(model,y,yb)
+    #y_bounds(model,y,yb)
     sort_y(model,y)
     sort_w(model,w)
 
@@ -362,7 +380,7 @@ def heilbronn_triangle_approach3_MIQCP(n,H,m,ub,lb,yb):
         for j in range(2,n-1):
             model.addConstr(w[i,j] == sum(2**(-h-1) * (xi[i,h]*y[j]) for h in range(H))+ (ep[i]*y[j]))
     
-    one_point_each_rectangle(model,point_in_rectangle,y,m)
+    one_point_each_rectangle(model,point_in_rectangle,y,lb)
     # sum_y(model,y)
     # sum_b(model,b)
     xi_lim(model,xi,H)
@@ -373,8 +391,10 @@ def heilbronn_triangle_approach3_MIQCP(n,H,m,ub,lb,yb):
                 model.addConstr(S[i, j, k] == 0.5 * (w[i,j] - w[i,k] + w[j,k] - w[j,i] + w[k,i] - w[k,j]), name=f"S_constr_{i}_{j}_{k}")
                 model.addConstr((1 - b[i, j, k])*(ub+0.5) + S[i, j, k] >= z, name=f"linearize1_{i}_{j}_{k}")
                 model.addConstr(b[i, j, k]*(ub+0.5) - S[i, j, k] >= z, name=f"linearize2_{i}_{j}_{k}")
-                model.addConstr(S[i, j, k] <= 0.5*b[i,j,k] , name="upper")
-                model.addConstr(S[i, j, k] >= 0.5*(b[i,j,k]-1) , name="lower")
+                model.addConstr((-ub) <= S[i,j,k]-((ub+lb)*b[i,j,k]))
+                model.addConstr(S[i,j,k]-((ub+lb)*b[i,j,k]) <= -lb)
+                # model.addConstr(S[i, j, k] <= 0.5*b[i,j,k] , name="upper")
+                # model.addConstr(S[i, j, k] >= 0.5*(b[i,j,k]-1) , name="lower")
     
     model.setObjective(z, GRB.MAXIMIZE)
     #model.setParam('MIPGap', 1e-6)
@@ -456,11 +476,14 @@ if lb == 0:
     lb=math.log(n)/(n**2)
 approach = int(input('Approach? '))
 
-ML=[4,6,7,10,11]
-if n>=6 and n<=10:
-    M = ML[n-6]
-else:
-    M=int(input('m: '))
+grid_size = lb/2
+M = 0
+grid_sum = 0
+for i in range(50):
+    if grid_sum>=1:
+        break
+    grid_sum += grid_size
+    M+=1
     
 YB= [[(0.1666,0.6667),(0.1666,0.8334),(0.3333,0.8334),(0.3333,1)],[(0.142857,0.714286),(0.142857,0.714286),(0.285714,0.857143),(0.285714,0.857143),(0.428571,1)]]
 if n>=7 and n<=8:
