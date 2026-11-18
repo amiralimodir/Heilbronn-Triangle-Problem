@@ -1,5 +1,5 @@
 # Recorded solver interface versions. Plotting/numerical package versions were
-# not preserved in historical logs; pip selects a Python-compatible release.
+# not recorded in the run logs; pip selects a Python-compatible release.
 gurobipy==11.0.1
 pyomo==6.8.2
 matplotlib

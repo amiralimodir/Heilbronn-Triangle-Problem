@@ -1,9 +1,7 @@
-# Usable procedural entry point based on the author-supplied formulations.
-# All original model/helper bodies are retained; only the plot title changes.
-# The launcher now dispatches MIQCP to its existing MIQCP function, rejects
-# unknown choices, and prompts/runs only when this file is executed directly.
-# See README.md: inherited settings/enhancements differ between formulations.
-# Use author_formulations_historical.py when reproducing the archived launcher.
+# Heilbronn formulations: Approaches 1, 2, and 3 in one procedural file.
+# Run this file and select n, UB, LB, and the approach at the prompts.
+# Approach 3 offers MILP and MIQCP; H is the binary expansion depth P.
+# See README.md for the settings used in each comparison.
 
 import gurobipy as gp
 from gurobipy import Model,quicksum,GRB

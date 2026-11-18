@@ -1,15 +1,10 @@
-"""Final Results: standalone procedural Approach 1, n=3,...,12.
+"""Final Results: standalone Approach 1 for n=3,...,12.
 
-Prepared selected profile: groups 1--3 enabled, group 4 disabled.
-For n=10,11,12, the additional unproved structural restrictions are active.
-The model/helper functions are unchanged from the 2026-11-16 all-constraints
-package. Only instance selection, startup, and the package-relative path changed.
-
-This prepared profile is not claimed to be the exact executed source/settings
-behind the older paper rows; see README.md and historical/provenance.json.
+Groups 1--3 are enabled; group 4 is disabled. Additional unproved structural
+restrictions are active for n=10,11,12. Edit bounds_by_n.json before running.
 
 Run: python final_results.py --n 9
-Check inputs without Gurobi or optimization: python final_results.py --n 9 --check
+Check inputs without a solver: python final_results.py --n 9 --check
 """
 
 import argparse
@@ -673,9 +668,9 @@ if __name__ == '__main__':
         UNPROVEN_RESTRICTIONS = ['near_boundary_A_requires_complementary_class_exclusion']
     elif True:
         QUALIFICATION = 'Restricted exploratory run with the requested larger-n restrictions: two selected points on each exact edge, fixed and relative y-coordinate restrictions, left/right half-balance and the median-y restriction. The two bottom points are ordered left to right; bottom and top triangle signs are fixed consistently with the signed-area formula. Coverage of unrestricted optima is not claimed for these combined restrictions. ObjBound applies to this implemented model. Exact evaluation of coordinates in the square supplies a feasible lower bound for the unrestricted problem. G4 is disabled.'
-        Y_BOUND_MODE = 'legacy_larger_n_exploratory_fixed_and_relative_bounds'
+        Y_BOUND_MODE = 'larger_n_exploratory_fixed_and_relative_bounds'
         STRUCTURAL_SCOPE = 'restricted_exploratory_model'
-        UNPROVEN_RESTRICTIONS = ['two_points_selected_on_each_exact_edge', 'legacy_larger_n_coordinate_bounds', 'relative_y_gaps_from_legacy_table', 'left_right_half_balance', 'median_y_at_least_one_half']
+        UNPROVEN_RESTRICTIONS = ['two_points_selected_on_each_exact_edge', 'larger_n_coordinate_bounds', 'relative_y_gaps_from_table', 'left_right_half_balance', 'median_y_at_least_one_half']
     FEATURE_NAMES = ['use_group1', 'use_group2', 'use_group3', 'use_group4', 'use_objective_bounds', 'use_y_order', 'use_w_order', 'use_reflection', 'use_x_edges', 'use_rectangles_y', 'use_rectangles_x', 'use_squares', 'use_y_bounds', 'use_half_balance', 'case_b', 'use_bottom_order', 'use_relative_y_gaps', 'use_y_median', 'use_edge_sign_fixing']
 
     BUILD_ONLY = args.build_only

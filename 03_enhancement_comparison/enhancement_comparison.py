@@ -1,7 +1,7 @@
-# Enhancement comparison: one complete procedural model for every group selection.
-# This preserves the model functions and constraint insertion order of the
-# archived November 2026 comparison implementation. See README.md for provenance.
-# Inputs and parameters are in this directory, independently of final-run settings.
+# Enhancement comparison: one complete model for every n/group selection.
+# Inputs: bounds_by_n.json. Solver parameters: solver_settings.json.
+# Comparison settings are independent of the final-results settings.
+
 import argparse
 import atexit
 import hashlib

@@ -1,21 +1,18 @@
-# Exact configuration-area verification
+# Independent area verification
 
-No optimizer or third-party package is required; Python 3.8+ suffices.
-
-From the repository root:
+Python 3.8+ is sufficient; no solver or third-party package is required.
 
 ```console
 python 06_validation/verify_areas.py --output validation_results/appendix
 python 06_validation/verify_areas.py data/coordinates/saved_n10_n12.csv --output validation_results/saved_runs
-python tools/check_repository.py
 ```
 
-The CSV columns are `n,i,x,y`. Each finite decimal is interpreted as an exact
-rational number. For every configuration the script checks every coordinate
-against [0,1], evaluates every triangle, identifies a minimizing triple, and
-produces the exact minimum and a downward-rounded seven-decimal lower bound.
-Out-of-square coordinates produce no feasible lower bound; they are not clipped.
+Input CSV columns are `n,i,x,y`. Every finite decimal is treated as an exact
+rational number. The script checks the unit square, evaluates every triangle,
+reports the exact minimum and a minimizing triple, and rounds feasible lower
+bounds down to seven decimal places. Coordinates are never clipped.
 
-The checks validate the explicit configurations. They do not establish global
-optimality, validate the solver's dual bound, or prove the added restrictions.
+The default input is the n=6…12 coordinate table from manuscript version 15.
+The outputs include a JSON summary and all triangle areas. These checks verify
+configurations, not global optimality or numerical solver dual bounds.
 

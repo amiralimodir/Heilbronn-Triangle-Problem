@@ -1,17 +1,32 @@
-"""Same supplied Pyomo model with corrected output and dual-bound recovery.
+"""Solver comparison: SCIP, Couenne, and BARON with the same Pyomo model.
 
-Only Couenne n=3,...,7 and SCIP n=7 run by default. No final-result tuning
-is imported here: LB=0, UB=0.5, time limit=86400, original solver defaults.
-See README.md for solver installation, archived data, and pending results.
-No optimization is performed merely by importing this script.
+LB=0, UB=0.5, time limit=86400. With no arguments, run the six cases whose
+dual bounds remain pending. Use --all for the complete comparison schedule.
+Edit the executable paths and RUNS_TO_REPEAT below when needed.
 """
+
 import argparse
+
+# Edit this list to select only the cases you need.
+RUNS_TO_REPEAT = [
+    ("couenne", 3), ("couenne", 4), ("couenne", 5),
+    ("couenne", 6), ("couenne", 7), ("scip", 7),
+]
+ALL_RUNS = [(solver, n) for solver in ("scip", "couenne")
+            for n in range(3, 8)] + [("baron", 7)]
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Run only the outstanding Couenne/SCIP dual-bound recovery cases; edit RUNS_TO_REPEAT to select cases.",
+        description="Compare solvers; default: pending cases. Use --all for the full schedule.",
         allow_abbrev=False)
-    parser.parse_args()
+    parser.add_argument("--all", action="store_true", help="Run SCIP/Couenne n=3..7 and BARON n=7.")
+    parser.add_argument("--list", action="store_true", help="Print selected cases without loading solvers.")
+    CLI_ARGS = parser.parse_args()
+    if CLI_ARGS.list:
+        cases = ALL_RUNS if CLI_ARGS.all else RUNS_TO_REPEAT
+        for solver, points in cases:
+            print(solver, points)
+        raise SystemExit(0)
 
 import pyomo.environ as pyo
 from pyomo.opt import SolverFactory
@@ -30,20 +45,11 @@ from decimal import Decimal
 from importlib.metadata import version as package_version
 
 
-# Only the six runs whose finite dual bounds were not saved previously.
-# To run a subset, remove the other entries from this list.
-RUNS_TO_REPEAT = [
-    ("couenne", 3),
-    ("couenne", 4),
-    ("couenne", 5),
-    ("couenne", 6),
-    ("couenne", 7),
-    ("scip", 7),
-]
 TIME_LIMIT = 86400
 SCIP_EXECUTABLE = r"C:\Program Files\SCIPOptSuite 10.1.0\bin\scip.exe"
 COUENNE_EXECUTABLE = r"C:\Program Files\Couenne\ampl.mswin64\couenne.exe"
-OUTPUT_ROOT = Path.home() / "heilbronn_solver_reruns"
+BARON_EXECUTABLE = r"C:\baron\baron.exe"
+OUTPUT_ROOT = Path.home() / "heilbronn_solver_comparison"
 STOP_ON_MISSING_BOUND = True
 
 # These runs deliberately retain the supplied model, including the absence
@@ -281,7 +287,7 @@ def solve_heilbronn(n, ub, lb, solver_name):
         with (run_dir / "couenne.opt").open("w", encoding="ascii") as stream:
             stream.write("time_limit " + str(TIME_LIMIT) + "\n")
     elif solver_name == "baron":
-        opt = SolverFactory("baron")
+        opt = SolverFactory("baron", executable=BARON_EXECUTABLE)
         opt.options["MaxTime"] = TIME_LIMIT
     else:
         raise ValueError(f"Unknown solver: {solver_name}")
@@ -421,24 +427,26 @@ def solve_with_models(n_points, solver_name):
 
 
 # --------------------------------------------------------------------------
-# Main Loop Execution -- only the missing-bound cases
+# Main Loop Execution
 # --------------------------------------------------------------------------
 if __name__ == "__main__":
+    if CLI_ARGS.all:
+        RUNS_TO_REPEAT = ALL_RUNS
     if not str(OUTPUT_ROOT.resolve()).isascii():
         raise SystemExit("Please set OUTPUT_ROOT to an ASCII-only writable folder.")
     if len(set(RUNS_TO_REPEAT)) != len(RUNS_TO_REPEAT):
         raise SystemExit("RUNS_TO_REPEAT contains duplicate cases.")
     for solver_name, n in RUNS_TO_REPEAT:
-        if solver_name not in ("couenne", "scip") or n not in range(3, 8):
-            raise SystemExit("This rerun list accepts Couenne/SCIP and n=3,...,7 only.")
-        executable = COUENNE_EXECUTABLE if solver_name == "couenne" else SCIP_EXECUTABLE
+        if solver_name not in ("couenne", "scip", "baron") or n not in range(3, 8):
+            raise SystemExit("Choose SCIP, Couenne, or BARON and n=3,...,7.")
+        executable = {"couenne": COUENNE_EXECUTABLE, "scip": SCIP_EXECUTABLE, "baron": BARON_EXECUTABLE}[solver_name]
         if not Path(executable).is_file():
             raise SystemExit("Solver executable not found: " + executable)
 
     OUTPUT_ROOT.mkdir(parents=True, exist_ok=True)
     SESSION_DIR = OUTPUT_ROOT / datetime.now().strftime("rerun_%Y%m%d_%H%M%S_%f")
     SESSION_DIR.mkdir(exist_ok=False)
-    output_filename = SESSION_DIR / "heilbronn_results_rerun_missing_duals.json"
+    output_filename = SESSION_DIR / "solver_results.json"
     result = {"scip": [], "couenne": [], "baron": []}
     print("Only these cases will run:", RUNS_TO_REPEAT)
     print("Results will be saved after EVERY run to:", output_filename)

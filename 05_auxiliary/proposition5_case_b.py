@@ -1,13 +1,11 @@
-"""Proposition 5, nine-point complementary Case B: procedural source recipe.
+"""Proposition 5: nine-point complementary Case B.
 
-Retains the supplied functions and Approach-1 model. The author clarified
-that the reported run used LB=0 and UB=0.0723767; the automatic positive-LB
-substitution is therefore disabled here. x[1]>=x[0] remains commented out.
-Settings: MIPGap=1e-6, MIPGapAbs=0, Symmetry=2; no explicit time limit.
-Logging/model/result export has been added, without adding model constraints.
-This reconstructed recipe is not an untouched snapshot of the historical run.
-See README.md and source_as_received/proposition5_case_b.txt for provenance.
+n=9, LB=0, UB=0.0723767, epsilon=0.01.
+MIPGap=1e-6, MIPGapAbs=0, Symmetry=2; no explicit time limit.
+The x[1]>=x[0] restriction is inactive. Logs, model, parameters, status,
+dual bound and coordinates are saved for each execution.
 """
+
 from pathlib import Path
 from datetime import datetime
 import argparse
