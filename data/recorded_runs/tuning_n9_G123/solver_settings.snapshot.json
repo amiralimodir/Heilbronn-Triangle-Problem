@@ -1,6 +1,0 @@
-{
-  "TimeLimit": 86400,
-  "MIPGap": 1e-6,
-  "MIPGapAbs": 0.00,
-  "Symmetry": 2
-}

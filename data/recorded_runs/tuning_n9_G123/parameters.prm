@@ -1,4 +1,0 @@
-TimeLimit  86400
-MIPGap  1e-06
-MIPGapAbs  0
-Symmetry  2
