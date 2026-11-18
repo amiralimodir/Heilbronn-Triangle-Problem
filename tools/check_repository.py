@@ -3,6 +3,7 @@ import ast
 import importlib.util
 import json
 from pathlib import Path
+import random
 import subprocess
 import sys
 import tempfile
@@ -78,8 +79,35 @@ def main():
         (n, group) for n in (7, 8, 9) for group in all_groups}
     final_cases = json.loads(listed("04_final_results/final_results.py"))
     assert len(final_cases) == 10 and {r["n"] for r in final_cases} == set(range(3, 13))
+    random_cases = json.loads(listed("05_auxiliary/max_random.py"))
+    assert {r["n"] for r in random_cases} == set(range(3, 13))
+    random_spec = importlib.util.spec_from_file_location("max_random", ROOT / "05_auxiliary/max_random.py")
+    random_module = importlib.util.module_from_spec(random_spec)
+    random_spec.loader.exec_module(random_module)
+    for n in range(3, 13):
+        points = random_module.sample_configuration(n, random.Random(12345 + n), 0.167718, 10000)
+        assert points is not None and len(points) == n
+        verification = random_module.verify_configuration(points)
+        assert verification["coordinates_in_unit_square"]
+        from fractions import Fraction
+        assert Fraction(verification["feasible_lower_bound_7dp"]) <= Fraction(verification["minimum_area_exact_fraction"])
+    rectangle_cases = [json.loads(line) for line in listed("05_auxiliary/heilbronn_in_rectangle.py").splitlines()]
+    assert {(r["n"], r["M"]) for r in rectangle_cases} == {
+        (n, m) for n in range(3, 10) for m in range(1, 8)}
+    rectangle_spec = importlib.util.spec_from_file_location("rectangles", ROOT / "05_auxiliary/heilbronn_in_rectangle.py")
+    rectangle_module = importlib.util.module_from_spec(rectangle_spec)
+    rectangle_spec.loader.exec_module(rectangle_module)
+    rectangle = {"n": 3, "M": 10, "model": "unrestricted", "status": "TIME_LIMIT",
+                 "ObjVal": 0.04, "ObjBound": 0.05}
+    assert rectangle_module.threshold_crossed(rectangle, "0.0548756")
+    assert not rectangle_module.threshold_crossed(dict(rectangle, ObjBound=0.06), "0.0548756")
+    assert not rectangle_module.threshold_crossed(dict(rectangle, ObjBound=None), "0.0548756")
+    bounds = rectangle_module.derive_y_bounds([rectangle], 9, "0.0548756")
+    assert bounds["lower_bounds"][2] == "1/10" and bounds["upper_bounds"][6] == "9/10"
+    unknown = rectangle_module.derive_y_bounds([dict(rectangle, model="unknown")], 9, "0.0548756")
+    assert not unknown["capacities"]
     print("PASS: {} Python files; exact CSV/JSON configuration checks; distinct parameter profiles; "
-          "19 formulation, 20 solver, 48 enhancement and 10 final cases.".format(checked))
+          "19 formulation, 20 solver, 48 enhancement and 10 final cases; auxiliary point counts and dual-bound decisions.".format(checked))
     return 0
 
 

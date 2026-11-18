@@ -3,7 +3,7 @@
 Code for **Solving the Heilbronn Triangle Problem using Global Optimization
 Methods**, by Amirali Modir, Amir Monji, and Burak Kocuk.
 
-Each section has one main Python file containing its complete procedural model.
+Each experiment has one main Python file containing its complete procedural model.
 
 | Experiment | Main file |
 |---|---|
@@ -12,6 +12,8 @@ Each section has one main Python file containing its complete procedural model.
 | Enhancement table: 16 combinations × n=7,8,9, 48 cases | [03_enhancement_comparison/enhancement_comparison.py](03_enhancement_comparison/enhancement_comparison.py) |
 | Final runs, n=3…12 | [04_final_results/final_results.py](04_final_results/final_results.py) |
 | Proposition 5, Case B | [05_auxiliary/proposition5_case_b.py](05_auxiliary/proposition5_case_b.py) |
+| Random feasible lower bounds, n=3…12 | [05_auxiliary/max_random.py](05_auxiliary/max_random.py) |
+| Rectangular subproblems and strip bounds | [05_auxiliary/heilbronn_in_rectangle.py](05_auxiliary/heilbronn_in_rectangle.py) |
 | Independent area verification | [06_validation/verify_areas.py](06_validation/verify_areas.py) |
 
 ## Setup
@@ -52,6 +54,7 @@ python 04_final_results/final_results.py --n 9 --check
 python 04_final_results/final_results.py --n 9
 python 05_auxiliary/proposition5_case_b.py --check
 python 05_auxiliary/proposition5_case_b.py
+python 05_auxiliary/max_random.py --n 9 --trials 500000 --seed 12345
 ```
 
 The selected final-run LB/UB inputs are in
@@ -68,7 +71,9 @@ Results are generated when experiments run; no bundled `data/` directory is
 required. The area verifier accepts saved coordinates or run outputs; see its
 [instructions](06_validation/README.md).
 
-The auxiliary max-random and y-bound source files are still awaiting the
-authors' final versions. See [reproducibility notes](docs/REPRODUCIBILITY.md)
-for the distinction between executable experiments and completed numerical results.
+The lower-bound and rectangle computations are described in
+[05_auxiliary/README.md](05_auxiliary/README.md). They save their own outputs;
+they do not overwrite the comparison or final-run bound files. See
+[reproducibility notes](docs/REPRODUCIBILITY.md) for the distinction between
+executable experiments and completed numerical results.
 
