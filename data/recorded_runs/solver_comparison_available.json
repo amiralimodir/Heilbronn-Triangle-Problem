@@ -1,0 +1,243 @@
+[
+  {
+    "objective": 0.5000000049907576,
+    "dual_bound": 0.500000004990758,
+    "x": [
+      7.471742515376418e-07,
+      1.0000000056490355,
+      -4.97588855474921e-09
+    ],
+    "y": [
+      1.0000000000552147,
+      0.007601825794940771,
+      -5.0190942151455426e-09
+    ],
+    "time": 0.3677561283111572,
+    "n": 3,
+    "solver": "scip",
+    "dual_bound_status": "recorded_by_original_interface",
+    "termination_status": null
+  },
+  {
+    "objective": 0.5000000089209246,
+    "dual_bound": 0.500000008920925,
+    "x": [
+      0.9999999942569927,
+      0.9999999961562683,
+      -1.2446423899309216e-09,
+      -3.765182568829965e-09
+    ],
+    "y": [
+      1.000000005550647,
+      9.747610193702288e-10,
+      -2.9305010796227544e-09,
+      1.0000000011571275
+    ],
+    "time": 0.16015863418579102,
+    "n": 4,
+    "solver": "scip",
+    "dual_bound_status": "recorded_by_original_interface",
+    "termination_status": null
+  },
+  {
+    "objective": 0.19245071804829988,
+    "dual_bound": 0.1924507180483,
+    "x": [
+      1.0,
+      0.42279176915340605,
+      0.0,
+      1.0,
+      0.33316867838499076
+    ],
+    "y": [
+      0.0,
+      1.0,
+      0.5772086825820995,
+      0.6668313216150092,
+      0.0
+    ],
+    "time": 21.222543001174927,
+    "n": 5,
+    "solver": "scip",
+    "dual_bound_status": "recorded_by_original_interface",
+    "termination_status": null
+  },
+  {
+    "objective": 0.12500089577345969,
+    "dual_bound": 0.12500089577346,
+    "x": [
+      0.49974302615045896,
+      0.9998940066769917,
+      0.0,
+      0.49995645676886974,
+      1.0,
+      0.00010551515124401778
+    ],
+    "y": [
+      0.0,
+      0.0010174827202125147,
+      0.4988333605390257,
+      1.0,
+      0.5008682400584348,
+      0.9989835316094701
+    ],
+    "time": 7065.602354049683,
+    "n": 6,
+    "solver": "scip",
+    "dual_bound_status": "recorded_by_original_interface",
+    "termination_status": null
+  },
+  {
+    "objective": 0.08385902106371919,
+    "dual_bound": null,
+    "x": [
+      1.0000000064297823,
+      -6.9764439863541205e-09,
+      0.4161409869089248,
+      0.819172711179136,
+      -8.888643514253584e-09,
+      0.8648086435662646,
+      0.507412850387089
+    ],
+    "y": [
+      0.2872577288869159,
+      1.0000000020717805,
+      0.2872577337510624,
+      -9.346036028592462e-09,
+      -2.6191989191181497e-09,
+      1.0000000032756213,
+      0.8060634338970214
+    ],
+    "time": 91978.064920187,
+    "n": 7,
+    "solver": "scip",
+    "dual_bound_status": "not_recovered_from_original_interface; rerun pending",
+    "termination_status": null
+  },
+  {
+    "objective": 0.5,
+    "dual_bound": null,
+    "x": [
+      1.0,
+      0.0,
+      1.0
+    ],
+    "y": [
+      0.0,
+      1.0,
+      1.0
+    ],
+    "time": 0.1695263385772705,
+    "n": 3,
+    "solver": "couenne",
+    "dual_bound_status": "not_recovered_from_original_interface; rerun pending",
+    "termination_status": null
+  },
+  {
+    "objective": 0.5,
+    "dual_bound": null,
+    "x": [
+      1.0,
+      0.0,
+      1.0,
+      0.0
+    ],
+    "y": [
+      0.0,
+      1.0,
+      1.0,
+      0.0
+    ],
+    "time": 0.7676045894622803,
+    "n": 4,
+    "solver": "couenne",
+    "dual_bound_status": "not_recovered_from_original_interface; rerun pending",
+    "termination_status": null
+  },
+  {
+    "objective": 0.19245010542146596,
+    "dual_bound": null,
+    "x": [
+      0.0,
+      0.4226497266000789,
+      0.3333333278344861,
+      1.0,
+      1.0
+    ],
+    "y": [
+      0.5773502688697449,
+      1.0,
+      0.0,
+      0.0,
+      0.6666666672413719
+    ],
+    "time": 47.684805393218994,
+    "n": 5,
+    "solver": "couenne",
+    "dual_bound_status": "not_recovered_from_original_interface; rerun pending",
+    "termination_status": null
+  },
+  {
+    "objective": 0.12500001366038294,
+    "dual_bound": null,
+    "x": [
+      1.0,
+      0.5000020260341946,
+      1.0,
+      0.5000020252171548,
+      0.0,
+      0.0
+    ],
+    "y": [
+      0.10428734968107727,
+      1.0,
+      0.6042893870722726,
+      0.0,
+      0.8957118006329546,
+      0.3957138211221999
+    ],
+    "time": 83642.63055610657,
+    "n": 6,
+    "solver": "couenne",
+    "dual_bound_status": "not_recovered_from_original_interface; rerun pending",
+    "termination_status": null
+  },
+  {
+    "objective": null,
+    "dual_bound": null,
+    "x": null,
+    "y": null,
+    "time": 86480.3954513073,
+    "n": 7,
+    "solver": "couenne",
+    "dual_bound_status": "not_recovered_from_original_interface; rerun pending",
+    "termination_status": null
+  },
+  {
+    "objective": 0.08386000900751345,
+    "dual_bound": 0.277777777778,
+    "x": [
+      0.2872544433050163,
+      1.0,
+      1.0,
+      0.8060611611037471,
+      0.2872455656518668,
+      0.0,
+      0.0
+    ],
+    "y": [
+      0.4161401935725003,
+      0.8648088179216785,
+      0.0,
+      0.5074101815115132,
+      1.0,
+      0.8191706087864254,
+      0.0
+    ],
+    "time": 86575.7663629055,
+    "n": 7,
+    "solver": "baron",
+    "dual_bound_status": "recorded_by_original_interface",
+    "termination_status": null
+  }
+]

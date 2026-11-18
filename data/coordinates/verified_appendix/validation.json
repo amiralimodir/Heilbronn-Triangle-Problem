@@ -1,0 +1,93 @@
+[
+  {
+    "n": 6,
+    "points_in_unit_square": true,
+    "minimum_area_exact_fraction": "12499952880163/100000000000000",
+    "minimum_area_exact_decimal": "0.12499952880163",
+    "one_minimizing_triple": [
+      2,
+      3,
+      4
+    ],
+    "triangle_count": 20,
+    "feasible_lower_bound_7dp": "0.1249995"
+  },
+  {
+    "n": 7,
+    "points_in_unit_square": true,
+    "minimum_area_exact_fraction": "8385831883643/100000000000000",
+    "minimum_area_exact_decimal": "0.08385831883643",
+    "one_minimizing_triple": [
+      2,
+      4,
+      6
+    ],
+    "triangle_count": 35,
+    "feasible_lower_bound_7dp": "0.0838583"
+  },
+  {
+    "n": 8,
+    "points_in_unit_square": true,
+    "minimum_area_exact_fraction": "7237596675989/100000000000000",
+    "minimum_area_exact_decimal": "0.07237596675989",
+    "one_minimizing_triple": [
+      3,
+      6,
+      7
+    ],
+    "triangle_count": 56,
+    "feasible_lower_bound_7dp": "0.0723759"
+  },
+  {
+    "n": 9,
+    "points_in_unit_square": true,
+    "minimum_area_exact_fraction": "1371892120889/25000000000000",
+    "minimum_area_exact_decimal": "0.05487568483556",
+    "one_minimizing_triple": [
+      1,
+      5,
+      9
+    ],
+    "triangle_count": 84,
+    "feasible_lower_bound_7dp": "0.0548756"
+  },
+  {
+    "n": 10,
+    "points_in_unit_square": true,
+    "minimum_area_exact_fraction": "1163423390367/25000000000000",
+    "minimum_area_exact_decimal": "0.04653693561468",
+    "one_minimizing_triple": [
+      2,
+      3,
+      7
+    ],
+    "triangle_count": 120,
+    "feasible_lower_bound_7dp": "0.0465369"
+  },
+  {
+    "n": 11,
+    "points_in_unit_square": true,
+    "minimum_area_exact_fraction": "7407263147871/200000000000000",
+    "minimum_area_exact_decimal": "0.037036315739355",
+    "one_minimizing_triple": [
+      3,
+      7,
+      10
+    ],
+    "triangle_count": 165,
+    "feasible_lower_bound_7dp": "0.0370363"
+  },
+  {
+    "n": 12,
+    "points_in_unit_square": true,
+    "minimum_area_exact_fraction": "3259828000149/100000000000000",
+    "minimum_area_exact_decimal": "0.03259828000149",
+    "one_minimizing_triple": [
+      1,
+      3,
+      6
+    ],
+    "triangle_count": 220,
+    "feasible_lower_bound_7dp": "0.0325982"
+  }
+]

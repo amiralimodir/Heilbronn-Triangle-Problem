@@ -1,0 +1,17 @@
+[
+  {
+    "file": "source_as_received/proposition5_case_b.txt",
+    "original_filename": "Pasted text.txt",
+    "sha256": "d07107f6c071465bb8a707f0b6dd1904e7fcb04ea19adc6d29283a481e70a13e"
+  },
+  {
+    "file": "source_as_received/rectangle_legacy.txt",
+    "original_filename": "heilbronn in rectangle.py",
+    "sha256": "5fea4fd3033971e1214cdf9315e0b921c5f3df2d7debe3fdb53c4f6a171f7991"
+  },
+  {
+    "file": "source_as_received/random_search_legacy.txt",
+    "original_filename": "max random.py",
+    "sha256": "45248b1ba6d0a7d34a8f25e4ee5086113111213e70a168a82adb5f1d7659afad"
+  }
+]

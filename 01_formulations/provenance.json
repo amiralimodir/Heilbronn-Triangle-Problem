@@ -1,0 +1,48 @@
+{
+  "source_description": "Author-supplied comparison implementation, confirmed by the author as used for the additional n=7,8 Approach1 versus Approach3 MILP experiment.",
+  "original_attachment_id": "b7903926-96b2-4980-9d23-be01d227e514",
+  "original_source_sha256": "7a0321bfd7da1efe9d80714ee1f75f6f38f2dc2cb9fd485052d1a1538205f33a",
+  "published_source_sha256": "e593b2129f66e904bcec9abbca2e7e9ca66744626101da88d450338ff6f66392",
+  "changes": [
+    "Prepend explanatory provenance comments; preserve the original source body byte-for-byte."
+  ],
+  "verification": {
+    "original_body_byte_identical": true,
+    "function_ast_unchanged": true,
+    "python_38_syntax_checked": true,
+    "optimization_run": false
+  },
+  "historical_inputs": {
+    "n": [
+      7,
+      8
+    ],
+    "input_lower_bound": 0,
+    "effective_lower_bound": "log(n)/n**2",
+    "input_upper_bound": 0.5,
+    "approach3_variant": "MILP",
+    "P": 10
+  },
+  "limitations": [
+    "Not an authenticated source for the separate unenhanced baseline table.",
+    "Original horizontal rectangle assignments are incomplete.",
+    "Original selector sends non-MILP input to the MILP function as well.",
+    "Original output does not consistently save a dual bound at a time limit."
+  ],
+  "current_entrypoint": {
+    "file": "formulations.py",
+    "sha256": "307530bd59a62358cdb7da2dc03f36feb069b22d2443a4088f0587254707c7f4",
+    "changes": [
+      "Preserve all original mathematical model and helper function bodies.",
+      "Correct launcher MIQCP dispatch and reject unknown choices.",
+      "Put interactive execution under a __main__ guard.",
+      "Change only the plot title from Optimal Points and Triangles to Computed configuration."
+    ],
+    "verification": {
+      "all_model_function_asts_unchanged": true,
+      "helper_asts_unchanged_except_plot_title": true,
+      "python_38_syntax_checked": true,
+      "optimization_run": false
+    }
+  }
+}

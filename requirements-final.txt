@@ -1,0 +1,4 @@
+# Selected new final-run reference environment; distinct from comparison runs.
+gurobipy==11.0.3
+matplotlib
+

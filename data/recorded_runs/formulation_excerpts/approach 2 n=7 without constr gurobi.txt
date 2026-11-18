@@ -1,0 +1,3 @@
+Time limit reached
+Warning: max constraint violation (1.6880e-06) exceeds tolerance
+Best objective 7.699825538550e-02, best bound 2.986682650984e-01, gap 287.8897%

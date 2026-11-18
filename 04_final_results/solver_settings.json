@@ -1,0 +1,13 @@
+{
+  "TimeLimit": 86400,
+  "MIPGap": 1e-06,
+  "MIPGapAbs": 0.0,
+  "Threads": 32,
+  "Seed": 0,
+  "FeasibilityTol": 1e-06,
+  "IntFeasTol": 1e-05,
+  "OptimalityTol": 1e-06,
+  "NonConvex": -1,
+  "Symmetry": 2,
+  "ConcurrentMIP": 1
+}

@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+.venv*/
+venv/
+**/results/
+**/runs/
+validation_results/
+*.lic
+gurobi.env
+.env
+.env.*
+gurobi.log
+result.jpg
+result.png
+*.tmp
+

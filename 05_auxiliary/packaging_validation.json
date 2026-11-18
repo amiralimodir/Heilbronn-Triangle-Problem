@@ -1,0 +1,8 @@
+{
+  "python38_syntax": "passed",
+  "case_b_constraint_construction_ast": "identical before solver parameters",
+  "case_b_unchanged_helper_functions": 15,
+  "corrected_dual_reader_functions": "identical to previously supplied corrected rerun file",
+  "source_checksums": "passed",
+  "optimization_jobs_executed": false
+}

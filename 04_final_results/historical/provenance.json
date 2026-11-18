@@ -1,0 +1,40 @@
+{
+  "source_file": "final code.txt",
+  "source_sha256": "3c14e58d7c156613297eeb1e8f5478aa4aa5fd59545b39616050d4bafc25b49c",
+  "repository_file": "legacy_n10_n12.py",
+  "adaptation": "English comment header only; original source bytes retained after header.",
+  "associated_point_counts": [
+    10,
+    11,
+    12
+  ],
+  "approach": 1,
+  "explicit_solver_parameters": {
+    "TimeLimit": 86000,
+    "MIPGap": 1e-06,
+    "MIPGapAbs": 0.0,
+    "Symmetry": 2
+  },
+  "zero_input_lower_bound_policy": "converted_to_natural_log(n)/n**2",
+  "input_bounds": {
+    "10": {
+      "lower_bound": null,
+      "upper_bound": null,
+      "status": "not_recorded"
+    },
+    "11": {
+      "lower_bound": null,
+      "upper_bound": null,
+      "status": "not_recorded"
+    },
+    "12": {
+      "lower_bound": null,
+      "upper_bound": null,
+      "status": "not_recorded"
+    }
+  },
+  "threads": "not_explicitly_set_in_supplied_source",
+  "packing_implementation": "capacity/linking constraints without exactly-one assignment",
+  "difference_from_prepared_profile": "Historical parameters/model allocations and LB policy are retained; not replaced by the prepared G123 profile.",
+  "exact_reexecution_possible_from_supplied_material_alone": false
+}

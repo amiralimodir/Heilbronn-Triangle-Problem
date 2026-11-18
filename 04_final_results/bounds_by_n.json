@@ -1,0 +1,62 @@
+{
+  "3": {
+    "lower_bound": null,
+    "upper_bound": 0.5,
+    "upper_bound_reference_n": null,
+    "upper_bound_source": "Maximum triangle area in the unit square; base case, no two-point Heilbronn optimum used."
+  },
+  "4": {
+    "lower_bound": null,
+    "upper_bound": 0.5,
+    "upper_bound_reference_n": 3,
+    "upper_bound_source": "H3*=1/2; monotonicity."
+  },
+  "5": {
+    "lower_bound": null,
+    "upper_bound": 0.5,
+    "upper_bound_reference_n": 4,
+    "upper_bound_source": "H4*=1/2; monotonicity."
+  },
+  "6": {
+    "lower_bound": null,
+    "upper_bound": 0.192451,
+    "upper_bound_reference_n": 5,
+    "upper_bound_source": "H5*=sqrt(3)/9, rounded upwards; monotonicity."
+  },
+  "7": {
+    "lower_bound": null,
+    "upper_bound": 0.125,
+    "upper_bound_reference_n": 6,
+    "upper_bound_source": "H6*=1/8; monotonicity."
+  },
+  "8": {
+    "lower_bound": null,
+    "upper_bound": 0.08386,
+    "upper_bound_reference_n": 7,
+    "upper_bound_source": "Established H7*=0.083859009... rounded upwards; monotonicity."
+  },
+  "9": {
+    "lower_bound": null,
+    "upper_bound": 0.072377,
+    "upper_bound_reference_n": 8,
+    "upper_bound_source": "Established H8*=(sqrt(13)-1)/36=0.072376424... rounded upwards; monotonicity."
+  },
+  "10": {
+    "lower_bound": null,
+    "upper_bound": 0.054879,
+    "upper_bound_reference_n": 9,
+    "upper_bound_source": "Published H9*<0.054878314 (Chen/Xu/Zeng 2017), rounded upwards; monotonicity."
+  },
+  "11": {
+    "lower_bound": null,
+    "upper_bound": 0.054879,
+    "upper_bound_reference_n": 9,
+    "upper_bound_source": "Conservative bound on H10* inherited from published H9*<0.054878314; not a restricted n10 solver bound."
+  },
+  "12": {
+    "lower_bound": null,
+    "upper_bound": 0.054879,
+    "upper_bound_reference_n": 9,
+    "upper_bound_source": "Conservative bound on H11* inherited from published H9*<0.054878314; not a restricted n11 solver bound."
+  }
+}

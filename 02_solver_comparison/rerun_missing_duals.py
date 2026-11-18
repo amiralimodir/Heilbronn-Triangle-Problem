@@ -1,0 +1,459 @@
+"""Same supplied Pyomo model with corrected output and dual-bound recovery.
+
+Only Couenne n=3,...,7 and SCIP n=7 run by default. No final-result tuning
+is imported here: LB=0, UB=0.5, time limit=86400, original solver defaults.
+See README.md for solver installation, archived data, and pending results.
+No optimization is performed merely by importing this script.
+"""
+import argparse
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Run only the outstanding Couenne/SCIP dual-bound recovery cases; edit RUNS_TO_REPEAT to select cases.",
+        allow_abbrev=False)
+    parser.parse_args()
+
+import pyomo.environ as pyo
+from pyomo.opt import SolverFactory
+from pyomo.common.tempfiles import TempfileManager
+import time
+import json
+import math
+import os
+import re
+import sys
+import shutil
+import struct
+from pathlib import Path
+from datetime import datetime
+from decimal import Decimal
+from importlib.metadata import version as package_version
+
+
+# Only the six runs whose finite dual bounds were not saved previously.
+# To run a subset, remove the other entries from this list.
+RUNS_TO_REPEAT = [
+    ("couenne", 3),
+    ("couenne", 4),
+    ("couenne", 5),
+    ("couenne", 6),
+    ("couenne", 7),
+    ("scip", 7),
+]
+TIME_LIMIT = 86400
+SCIP_EXECUTABLE = r"C:\Program Files\SCIPOptSuite 10.1.0\bin\scip.exe"
+COUENNE_EXECUTABLE = r"C:\Program Files\Couenne\ampl.mswin64\couenne.exe"
+OUTPUT_ROOT = Path.home() / "heilbronn_solver_reruns"
+STOP_ON_MISSING_BOUND = True
+
+# These runs deliberately retain the supplied model, including the absence
+# of the extra sign-strengthening inequalities. LB=0 and UB=0.5 are unchanged.
+# No feasibility, gap, or thread settings are changed.
+SESSION_DIR = None
+LAST_RUN_DETAILS = {}
+SCRIPT_PATH = Path(__file__).resolve()
+NUMBER = r"[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eEdD][+-]?\d+)?"
+BOUND_TOKEN = r"(?:" + NUMBER + r"|[+-]?(?:inf(?:inity)?|nan))"
+
+
+def finite_number(value):
+    try:
+        number = float(str(value).replace("D", "E").replace("d", "e"))
+        return number if math.isfinite(number) else None
+    except (TypeError, ValueError, OverflowError):
+        return None
+
+
+def write_json(path, data):
+    # Atomic checkpoint; an interruption cannot replace it with half a JSON file.
+    path = Path(path)
+    temporary = path.with_name(path.name + ".tmp")
+    with temporary.open("w", encoding="utf-8") as stream:
+        json.dump(data, stream, indent=4, allow_nan=False)
+    os.replace(str(temporary), str(path))
+
+
+def printed_rounding_allowance(token, significant_digits):
+    value = Decimal(token.replace("D", "E").replace("d", "e"))
+    if not value.is_finite() or value.is_zero():
+        return 0.0
+    # Half the last printed significant digit, for the solver's %g output.
+    return float(Decimal(5).scaleb(value.copy_abs().adjusted() - significant_digits))
+
+
+def float_rounded_up(decimal_value):
+    """Convert a finite Decimal outward, including on Python 3.8."""
+    value = float(decimal_value)
+    if Decimal.from_float(value) < decimal_value:
+        if value == 0.0:
+            return float.fromhex("0x0.0000000000001p-1022")
+        bits = struct.unpack("!Q", struct.pack("!d", value))[0]
+        bits += 1 if value > 0 else -1
+        value = struct.unpack("!d", struct.pack("!Q", bits))[0]
+    return value
+
+
+def extract_couenne_bound(log_text):
+    """Couenne 0.5.8: original maximize(z) is internally minimize(-z).
+
+    The final Lower bound is the global bound for that MINIMIZATION problem.
+    Hence the original maximization upper bound is its NEGATIVE, not abs()
+    and not the final internal Upper bound (which is the incumbent).
+    Source: Couenne release 0.5.8, BonCouenne.cpp and CouenneProblem.cpp,
+    commit 7154f7a9b3cd84be378d02b483d090b76fc79ce8.
+    """
+    pattern = (
+        r"^[ \t]*Lower bound:[ \t]*(" + BOUND_TOKEN + r")[ \t]*\r?\n"
+        r"[ \t]*Upper bound:[ \t]*(" + BOUND_TOKEN + r")[^\r\n]*\r?\n"
+        r"[ \t]*Branch-and-bound nodes:[^\r\n]*"
+    )
+    matches = list(re.finditer(pattern, log_text, re.MULTILINE | re.IGNORECASE))
+    if not matches:
+        return None, {"bound_error": "Couenne final bound summary was not found."}
+    match = matches[-1]
+    lower_token, upper_token = match.group(1), match.group(2)
+    lower = finite_number(lower_token)
+    upper = finite_number(upper_token)
+    info = {
+        "bound_source": "couenne_final_summary: minus internal Lower bound",
+        "bound_raw_text": match.group(0),
+        "internal_lower_token": lower_token,
+        "internal_upper_token": upper_token,
+        "internal_minimization_lower_bound": lower,
+        "internal_minimization_incumbent": upper,
+        "bound_print_significant_digits": 6,
+        "bound_error": None,
+    }
+    if lower is None or abs(lower) >= 1e40:
+        info["bound_error"] = "Couenne did not print a usable finite global lower bound."
+        return None, info
+    allowance = printed_rounding_allowance(lower_token, 6)
+    info["bound_print_rounding_allowance"] = allowance
+    if upper is not None and abs(upper) < 1e40:
+        upper_allowance = printed_rounding_allowance(upper_token, 6)
+        if lower > upper + allowance + upper_allowance + 1e-10:
+            info["bound_error"] = "Inconsistent internal lower/upper bounds in final summary."
+            return None, info
+    reported_decimal = -Decimal(lower_token.replace("D", "E").replace("d", "e"))
+    exact_allowance = (Decimal(0) if reported_decimal.is_zero() else
+                       Decimal(5).scaleb(reported_decimal.copy_abs().adjusted() - 6))
+    adjusted_decimal = reported_decimal + exact_allowance
+    dual_bound = float_rounded_up(adjusted_decimal)
+    # The primary field includes an allowance for the six-significant-digit
+    # printed summary, which can otherwise round a numerical UB DOWNWARD.
+    # This accounts ONLY for print rounding, not solver numerical errors.
+    info["dual_bound_reported"] = -lower
+    info["dual_bound_decimal"] = str(adjusted_decimal)
+    info["dual_bound_adjustment"] = "Half the final printed significant digit, outward conversion"
+    info["dual_bound_with_print_rounding_allowance"] = dual_bound
+    return dual_bound, info
+
+
+def extract_dual_bound(solver_name, results, log_text):
+    if solver_name == "couenne":
+        return extract_couenne_bound(log_text)
+
+    if solver_name == "scip":
+        matches = list(re.finditer(
+            r"^[ \t]*Dual Bound[ \t]*:[ \t]*(" + BOUND_TOKEN + r")",
+            log_text, re.MULTILINE | re.IGNORECASE,
+        ))
+        if matches:
+            token = matches[-1].group(1)
+            bound = finite_number(token)
+            if bound is not None and abs(bound) < 1e19:
+                return bound, {
+                    "bound_source": "scip_final_log_dual_bound",
+                    "bound_raw_text": matches[-1].group(0),
+                    "bound_error": None,
+                }
+        if results is not None:
+            bound = finite_number(getattr(results.solver, "dual_bound", None))
+            if bound is not None and abs(bound) < 1e19:
+                return bound, {
+                    "bound_source": "results.solver.dual_bound",
+                    "bound_error": None,
+                }
+
+    if results is not None and len(results.problem) > 0:
+        bound = finite_number(results.problem.upper_bound)
+        if bound is not None and abs(bound) < 1e19:
+            return bound, {
+                "bound_source": "results.problem.upper_bound",
+                "bound_error": None,
+            }
+    return None, {"bound_error": "No finite dual bound was recovered; inspect solver.log."}
+
+
+def termination_label(results, log_text):
+    condition = str(results.solver.termination_condition) if results is not None else "unknown"
+    # Keep the original Pyomo status separately. In ASL, a time limit can appear
+    # as maxIterations, so inspect the solver's own termination message too.
+    message = str(results.solver.message) if results is not None else ""
+    if condition in ("optimal", "globallyOptimal"):
+        return "OPTIMAL_WITHIN_SOLVER_TOLERANCES"
+    message_has_limit = re.search(
+        r"time limit reached|maximum (?:cpu )?time|time limit exceeded|stopped on time",
+        message, re.IGNORECASE,
+    )
+    global_log_has_limit = re.search(
+        r"Cbc0020I[^\r\n]*maximum time|SCIP Status[^\r\n]*time limit reached",
+        log_text, re.IGNORECASE,
+    )
+    if condition == "maxTimeLimit" or message_has_limit or global_log_has_limit:
+        return "TIME_LIMIT"
+    return condition
+
+
+def solve_heilbronn(n, ub, lb, solver_name):
+    """Same supplied mathematical model; corrected output recovery."""
+    global SESSION_DIR, LAST_RUN_DETAILS
+    solver_name = solver_name.lower()
+    if (lb, ub) != (0, 0.5):
+        raise ValueError("These comparison reruns are defined for LB=0 and UB=0.5.")
+    if SESSION_DIR is None:
+        SESSION_DIR = OUTPUT_ROOT / datetime.now().strftime("rerun_%Y%m%d_%H%M%S_%f")
+        SESSION_DIR.mkdir(parents=True, exist_ok=False)
+    run_dir = SESSION_DIR / (solver_name + "_n" + str(n))
+    run_dir.mkdir(parents=True, exist_ok=False)
+    run_dir = run_dir.resolve()
+    if not str(run_dir).isascii():
+        raise RuntimeError("Set OUTPUT_ROOT to a writable path containing ASCII characters only.")
+    log_path = run_dir / "solver.log"
+    shutil.copyfile(str(SCRIPT_PATH), str(run_dir / "executed_source.py"))
+    LAST_RUN_DETAILS = {
+        "solver": solver_name, "n": n, "input_lb": lb, "input_ub": ub,
+        "time_limit": TIME_LIMIT, "run_directory": str(run_dir),
+        "solver_log": str(log_path), "python_version": sys.version,
+        "python_executable": sys.executable, "pyomo_version": package_version("pyomo"),
+        "model_variant": "original supplied Pyomo model; no added sign-strengthening inequalities",
+    }
+    write_json(run_dir / "run_config.json", LAST_RUN_DETAILS)
+
+    # --------------------------------------------------------------------------
+    # 1. Pyomo Model Creation
+    # --------------------------------------------------------------------------
+    model = pyo.ConcreteModel(name=f"Heilbronn_Triangle_{solver_name}_{n}")
+
+    # --------------------------------------------------------------------------
+    # 2. Index Sets
+    # --------------------------------------------------------------------------
+    model.I = pyo.RangeSet(1, n)
+    model.J = pyo.RangeSet(1, n)
+    model.K = pyo.RangeSet(1, n)
+    model.Triangles = pyo.Set(initialize=lambda m: [(i, j, k) for i in m.I for j in m.J for k in m.K if i < j < k])
+
+    # --------------------------------------------------------------------------
+    # 3. Decision Variables
+    # --------------------------------------------------------------------------
+    model.x = pyo.Var(model.I, bounds=(0, 1), within=pyo.NonNegativeReals)
+    model.y = pyo.Var(model.I, bounds=(0, 1), within=pyo.NonNegativeReals)
+    model.w = pyo.Var(model.I, model.J, bounds=(0, 1), within=pyo.NonNegativeReals)
+    model.S = pyo.Var(model.Triangles, bounds=(-0.5, 0.5), within=pyo.Reals)
+    model.b = pyo.Var(model.Triangles, within=pyo.Binary)
+    model.z = pyo.Var(bounds=(0, 0.5), within=pyo.NonNegativeReals)
+
+    # --------------------------------------------------------------------------
+    # 4. Objective Function
+    # --------------------------------------------------------------------------
+    model.objective = pyo.Objective(expr=model.z, sense=pyo.maximize)
+
+    # --------------------------------------------------------------------------
+    # 5. Constraints -- unchanged from the supplied code
+    # --------------------------------------------------------------------------
+    model.w_def = pyo.Constraint(model.I, model.J, rule=lambda m, i, j: m.w[i, j] == m.x[i] * m.y[j])
+    model.area_calculation = pyo.ConstraintList()
+    for (i, j, k) in model.Triangles:
+        expr = 0.5 * (model.w[i, j] - model.w[i, k] + model.w[j, k] - model.w[j, i] + model.w[k, i] - model.w[k, j])
+        model.area_calculation.add(model.S[i, j, k] == expr)
+        model.area_calculation.add((1 - model.b[i, j, k]) * (ub + 0.5) + model.S[i, j, k] >= model.z)
+        model.area_calculation.add(model.b[i, j, k] * (ub + 0.5) - model.S[i, j, k] >= model.z)
+
+    # --------------------------------------------------------------------------
+    # 6. Dynamic Solver Factory Setup
+    # --------------------------------------------------------------------------
+    print(f"\nPyomo model created. Sending to {solver_name.upper()} solver...")
+    if solver_name == "scip":
+        opt = SolverFactory("scip", executable=SCIP_EXECUTABLE, solver_io="nl")
+        opt.options["limits/time"] = TIME_LIMIT
+    elif solver_name == "couenne":
+        opt = SolverFactory("couenne", executable=COUENNE_EXECUTABLE)
+        with (run_dir / "couenne.opt").open("w", encoding="ascii") as stream:
+            stream.write("time_limit " + str(TIME_LIMIT) + "\n")
+    elif solver_name == "baron":
+        opt = SolverFactory("baron")
+        opt.options["MaxTime"] = TIME_LIMIT
+    else:
+        raise ValueError(f"Unknown solver: {solver_name}")
+
+    old_cwd = Path.cwd()
+    old_tempdir = TempfileManager.tempdir
+    results = None
+    solve_error = None
+    load_error = None
+    optimal_z, optimal_x, optimal_y = None, None, None
+    try:
+        # Isolate Couenne options and all .nl/.sol files in the ASCII run folder.
+        os.chdir(str(run_dir))
+        TempfileManager.tempdir = str(run_dir)
+        start_time = time.time()
+        try:
+            results = opt.solve(
+                model, tee=True, logfile=str(log_path),
+                keepfiles=True, load_solutions=False,
+            )
+            invalid_conditions = {
+                "infeasible", "unbounded", "infeasibleOrUnbounded",
+                "invalidProblem", "internalSolverError", "solverFailure", "error",
+            }
+            condition = str(results.solver.termination_condition)
+            if len(results.solution) > 0 and condition not in invalid_conditions:
+                try:
+                    # Includes warning/maxIterations solutions from the ASL reader.
+                    model.solutions.load_from(results)
+                    values = [pyo.value(model.z, exception=False)]
+                    values += [pyo.value(model.x[i], exception=False) for i in model.I]
+                    values += [pyo.value(model.y[i], exception=False) for i in model.I]
+                    values = [finite_number(value) for value in values]
+                    if all(value is not None for value in values):
+                        optimal_z = values[0]
+                        optimal_x = values[1:n + 1]
+                        optimal_y = values[n + 1:]
+                except Exception as exc:
+                    load_error = repr(exc)
+        except Exception as exc:
+            solve_error = repr(exc)
+        finally:
+            # As in the original script, includes export, execution and loading.
+            optimize_time = time.time() - start_time
+
+        # Version probing is deliberately AFTER timing, not before the solve.
+        try:
+            reported_version = opt.version()
+            solver_version = list(reported_version) if reported_version is not None else None
+        except Exception as exc:
+            solver_version = None
+            LAST_RUN_DETAILS["version_error"] = repr(exc)
+        LAST_RUN_DETAILS["solver_version"] = solver_version
+        LAST_RUN_DETAILS["solver_executable"] = str(opt.executable())
+        if results is not None:
+            try:
+                results.write(filename=str(run_dir / "pyomo_results.yml"), format="yaml")
+            except Exception as exc:
+                LAST_RUN_DETAILS["results_write_error"] = repr(exc)
+    finally:
+        os.chdir(str(old_cwd))
+        TempfileManager.tempdir = old_tempdir
+
+    # --------------------------------------------------------------------------
+    # 7. Processing Results
+    # --------------------------------------------------------------------------
+    log_text = log_path.read_text(encoding="utf-8", errors="replace") if log_path.exists() else ""
+    dual_bound, bound_info = extract_dual_bound(solver_name, results, log_text)
+    condition = str(results.solver.termination_condition) if results is not None else "unknown"
+    if condition in ("infeasible", "unbounded", "infeasibleOrUnbounded"):
+        dual_bound = None
+        bound_info["bound_error"] = "Unexpected termination for this comparison model: " + condition
+
+    if solver_name == "couenne" and "internal_upper_token" in bound_info:
+        upper = bound_info.get("internal_minimization_incumbent")
+        if upper is None or abs(upper) >= 1e40:
+            # Do not mistake initial/placeholder variable values for an incumbent.
+            optimal_z, optimal_x, optimal_y = None, None, None
+
+    if solver_name == "scip":
+        primal_lines = re.findall(
+            r"^[ \t]*Primal Bound[ \t]*:[ \t]*(" + BOUND_TOKEN + r")([^\r\n]*)",
+            log_text, re.MULTILINE | re.IGNORECASE,
+        )
+        if primal_lines:
+            primal_value = finite_number(primal_lines[-1][0])
+            no_solutions = re.search(r"\b0 solutions\b", primal_lines[-1][1])
+            if primal_value is None or abs(primal_value) >= 1e19 or no_solutions:
+                optimal_z, optimal_x, optimal_y = None, None, None
+
+    warnings = []
+    if dual_bound is not None and optimal_z is not None and dual_bound < optimal_z:
+        difference = optimal_z - dual_bound
+        allowance = bound_info.get("bound_print_rounding_allowance", 0.0)
+        warnings.append("Printed dual is below incumbent by " + str(difference)
+                        + "; print-rounding allowance is " + str(allowance) + ".")
+        if difference > allowance + 1e-5:
+            bound_info["rejected_dual_bound"] = dual_bound
+            bound_info["bound_error"] = "Bound/incumbent mismatch exceeds the diagnostic tolerance."
+            dual_bound = None
+
+    LAST_RUN_DETAILS.update(bound_info)
+    LAST_RUN_DETAILS.update({
+        "objective": optimal_z, "dual_bound": dual_bound,
+        "x": optimal_x, "y": optimal_y, "time": optimize_time,
+        "solver_status": str(results.solver.status) if results is not None else "error",
+        "termination_condition": condition,
+        "termination_status": termination_label(results, log_text),
+        "solver_message": str(results.solver.message) if results is not None else None,
+        "solve_error": solve_error, "solution_load_error": load_error,
+        "warnings": warnings,
+    })
+    write_json(run_dir / "result.json", LAST_RUN_DETAILS)
+    print("\n" + "=" * 50)
+    print("Solver:", solver_name.upper(), "n:", n)
+    print("Termination:", LAST_RUN_DETAILS["termination_status"])
+    print("Pyomo termination:", condition)
+    print("Objective:", optimal_z)
+    print("Dual upper bound:", dual_bound)
+    print("Bound source:", bound_info.get("bound_source"))
+    print("Elapsed solve-call seconds:", optimize_time)
+    print("Saved run folder:", run_dir)
+    if bound_info.get("bound_error"):
+        print("BOUND EXTRACTION ERROR:", bound_info["bound_error"])
+    if solve_error:
+        print("SOLVE ERROR:", solve_error)
+    if load_error:
+        print("SOLUTION LOAD ERROR:", load_error)
+    for warning in warnings:
+        print("WARNING:", warning)
+    return optimal_z, dual_bound, optimal_x, optimal_y, optimize_time
+
+
+def solve_with_models(n_points, solver_name):
+    # The original comparison input bounds are preserved exactly.
+    return solve_heilbronn(n_points, 0.5, 0, solver_name)
+
+
+# --------------------------------------------------------------------------
+# Main Loop Execution -- only the missing-bound cases
+# --------------------------------------------------------------------------
+if __name__ == "__main__":
+    if not str(OUTPUT_ROOT.resolve()).isascii():
+        raise SystemExit("Please set OUTPUT_ROOT to an ASCII-only writable folder.")
+    if len(set(RUNS_TO_REPEAT)) != len(RUNS_TO_REPEAT):
+        raise SystemExit("RUNS_TO_REPEAT contains duplicate cases.")
+    for solver_name, n in RUNS_TO_REPEAT:
+        if solver_name not in ("couenne", "scip") or n not in range(3, 8):
+            raise SystemExit("This rerun list accepts Couenne/SCIP and n=3,...,7 only.")
+        executable = COUENNE_EXECUTABLE if solver_name == "couenne" else SCIP_EXECUTABLE
+        if not Path(executable).is_file():
+            raise SystemExit("Solver executable not found: " + executable)
+
+    OUTPUT_ROOT.mkdir(parents=True, exist_ok=True)
+    SESSION_DIR = OUTPUT_ROOT / datetime.now().strftime("rerun_%Y%m%d_%H%M%S_%f")
+    SESSION_DIR.mkdir(exist_ok=False)
+    output_filename = SESSION_DIR / "heilbronn_results_rerun_missing_duals.json"
+    result = {"scip": [], "couenne": [], "baron": []}
+    print("Only these cases will run:", RUNS_TO_REPEAT)
+    print("Results will be saved after EVERY run to:", output_filename)
+
+    for solver_name, n in RUNS_TO_REPEAT:
+        print(f"\n-------------------- {solver_name.upper()}, n = {n} --------------------")
+        z, dual_bound, x, y, solve_time = solve_with_models(n, solver_name)
+        # Keep the same solver -> list -> n -> record structure as the input code.
+        result[solver_name].append({n: dict(LAST_RUN_DETAILS)})
+        write_json(output_filename, result)
+        if STOP_ON_MISSING_BOUND and (dual_bound is None or LAST_RUN_DETAILS.get("solve_error")):
+            raise SystemExit(
+                "Stopped before the next run because bound recovery or solve failed. "
+                "The completed output and raw solver files have been saved in: "
+                + LAST_RUN_DETAILS["run_directory"]
+            )
+
+    print("\nAll selected reruns completed. Results:", output_filename)

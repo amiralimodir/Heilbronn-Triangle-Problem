@@ -1,0 +1,58 @@
+{
+  "6": {
+    "exact_minimum_area": "0.12499952880163",
+    "minimizing_triple": [
+      2,
+      3,
+      4
+    ]
+  },
+  "7": {
+    "exact_minimum_area": "0.08385831883643",
+    "minimizing_triple": [
+      2,
+      4,
+      6
+    ]
+  },
+  "8": {
+    "exact_minimum_area": "0.07237596675989",
+    "minimizing_triple": [
+      3,
+      6,
+      7
+    ]
+  },
+  "9": {
+    "exact_minimum_area": "0.05487568483556",
+    "minimizing_triple": [
+      1,
+      5,
+      9
+    ]
+  },
+  "10": {
+    "exact_minimum_area": "0.04653693561468",
+    "minimizing_triple": [
+      2,
+      3,
+      7
+    ]
+  },
+  "11": {
+    "exact_minimum_area": "0.037036315739355",
+    "minimizing_triple": [
+      3,
+      7,
+      10
+    ]
+  },
+  "12": {
+    "exact_minimum_area": "0.03259828000149",
+    "minimizing_triple": [
+      1,
+      3,
+      6
+    ]
+  }
+}

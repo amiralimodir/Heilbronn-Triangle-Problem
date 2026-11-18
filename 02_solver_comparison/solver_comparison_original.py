@@ -1,0 +1,190 @@
+"""Original procedural Pyomo solver comparison, kept for provenance.
+
+Paper: Computational Experiments / Solver Comparison.
+LB=0, UB=0.5; 86400-second requested limits. Runs SCIP and Couenne for
+n=3,...,7, then BARON for n=7. This original reader may report Infinity
+when a finite dual bound was not parsed. It is not a reliable bound exporter.
+Use rerun_missing_duals.py for the six outstanding bound-recovery runs.
+The original source is preserved byte-for-byte in source_as_received/.
+"""
+import argparse
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Historical Pyomo comparison driver; see README for its known dual-bound export limitation.",
+        allow_abbrev=False)
+    parser.parse_args()
+
+import pyomo.environ as pyo
+from pyomo.opt import SolverFactory
+import time
+import json
+
+def solve_heilbronn(n, ub, lb, solver_name):
+    """
+    Solves the Heilbronn triangle problem using Pyomo and a specified solver.
+    """
+    # --------------------------------------------------------------------------
+    # 1. Pyomo Model Creation
+    # --------------------------------------------------------------------------
+    model = pyo.ConcreteModel(name=f"Heilbronn_Triangle_{solver_name}_{n}")
+
+    # --------------------------------------------------------------------------
+    # 2. Index Sets
+    # --------------------------------------------------------------------------
+    model.I = pyo.RangeSet(1, n)
+    model.J = pyo.RangeSet(1, n)
+    model.K = pyo.RangeSet(1, n)
+
+    # Unique triangle combinations (i, j, k) where i < j < k
+    model.Triangles = pyo.Set(initialize=lambda m: [(i, j, k) for i in m.I for j in m.J for k in m.K if i < j < k])
+
+    # --------------------------------------------------------------------------
+    # 3. Decision Variables
+    # --------------------------------------------------------------------------
+    model.x = pyo.Var(model.I, bounds=(0, 1), within=pyo.NonNegativeReals)
+    model.y = pyo.Var(model.I, bounds=(0, 1), within=pyo.NonNegativeReals)
+    model.w = pyo.Var(model.I, model.J, bounds=(0, 1), within=pyo.NonNegativeReals)
+    model.S = pyo.Var(model.Triangles, bounds=(-0.5, 0.5), within=pyo.Reals)
+    model.b = pyo.Var(model.Triangles, within=pyo.Binary)
+    model.z = pyo.Var(bounds=(0, 0.5), within=pyo.NonNegativeReals)
+
+    # --------------------------------------------------------------------------
+    # 4. Objective Function
+    # --------------------------------------------------------------------------
+    model.objective = pyo.Objective(expr=model.z, sense=pyo.maximize)
+
+    # --------------------------------------------------------------------------
+    # 5. Constraints
+    # --------------------------------------------------------------------------
+    model.w_def = pyo.Constraint(model.I, model.J, rule=lambda m, i, j: m.w[i, j] == m.x[i] * m.y[j])
+
+    model.area_calculation = pyo.ConstraintList()
+    for (i, j, k) in model.Triangles:
+        # Shoelace formula for signed triangle area
+        expr = 0.5 * (model.w[i, j] - model.w[i, k] + model.w[j, k] - model.w[j, i] + model.w[k, i] - model.w[k, j])
+        model.area_calculation.add(model.S[i, j, k] == expr)
+
+        # Big-M linearization for absolute value
+        model.area_calculation.add((1 - model.b[i, j, k]) * (ub + 0.5) + model.S[i, j, k] >= model.z)
+        model.area_calculation.add(model.b[i, j, k] * (ub + 0.5) - model.S[i, j, k] >= model.z)
+
+    # --------------------------------------------------------------------------
+    # 6. Dynamic Solver Factory Setup
+    # --------------------------------------------------------------------------
+    print(f"\nPyomo model created. Sending to {solver_name.upper()} solver...")
+
+    if solver_name.lower() == 'scip':
+        opt = SolverFactory('scip', executable=r'C:\Program Files\SCIPOptSuite 10.1.0\bin\scip.exe', solver_io='nl')
+        opt.options['limits/time'] = 86400  # SCIP 24h limit
+
+    elif solver_name.lower() == 'couenne':
+        couenne_path = r'C:\Program Files\Couenne\ampl.mswin64\couenne.exe'
+        opt = SolverFactory('couenne', executable=couenne_path)
+        with open('couenne.opt', 'w') as f:
+            f.write('time_limit 86400\n') # Couenne 24h limit
+        
+    elif solver_name.lower() == 'baron':
+        opt = SolverFactory('baron')
+        opt.options['MaxTime'] = 86400      # BARON 24h limit
+
+    else:
+        raise ValueError(f"Unknown solver: {solver_name}")
+
+    start_time = time.time()
+    try:
+        results = opt.solve(model, tee=True)
+    except Exception as e:
+        print(f"\nAn error occurred while running the {solver_name} solver: {e}")
+        return None, None, None, None, time.time() - start_time
+
+    optimize_time = time.time() - start_time
+
+    # --------------------------------------------------------------------------
+    # 7. Processing Results
+    # --------------------------------------------------------------------------
+    optimal_z, dual_bound, optimal_x, optimal_y = None, None, None, None
+
+    print("\n" + "="*40)
+    print(f"SOLVER RESULTS ({solver_name.upper()})")
+    print("="*40)
+    print(f"Solver status: {results.solver.status}")
+    print(f"Termination condition: {results.solver.termination_condition}")
+
+    valid_conditions = [
+        pyo.TerminationCondition.optimal,
+        pyo.TerminationCondition.feasible,
+        pyo.TerminationCondition.maxTimeLimit
+    ]
+
+    # Extract Dual Bound (Upper bound for maximization problems)
+    if len(results.problem) > 0:
+        dual_bound = results.problem.upper_bound
+
+    if results.solver.termination_condition in valid_conditions:
+        try:
+            optimal_z = pyo.value(model.z)
+            optimal_x = [pyo.value(model.x[i]) for i in model.I]
+            optimal_y = [pyo.value(model.y[i]) for i in model.I]
+            print(f"Objective Value (Primal Bound): {optimal_z}")
+            print(f"Best Possible Bound (Dual Bound): {dual_bound}")
+        except ValueError:
+            print("Solver reported success, but no variable values were returned.")
+    else:
+        print("Solver did not find an optimal or feasible solution.")
+
+    return optimal_z, dual_bound, optimal_x, optimal_y, optimize_time
+
+
+def solve_with_models(n_points, solver_name):
+    z, dual_bound, x, y, solve_time = solve_heilbronn(n_points, 0.5, 0, solver_name)
+
+    if z is not None or dual_bound is not None:
+        print("\n" + "="*40)
+        print("OPTIMIZATION SUMMARY")
+        print("="*40)
+        print(f"Solver: {solver_name.upper()}")
+        print(f"Number of points (n): {n_points}")
+        print(f"Final Objective (Primal): {z if z is not None else 'N/A'}")
+        print(f"Best Possible (Dual):    {dual_bound if dual_bound is not None else 'N/A'}")
+        # Calculate gap if both bounds exist and are non-zero
+        if z is not None and dual_bound is not None and z > 0:
+            gap = abs(dual_bound - z) / abs(z) * 100
+            print(f"Optimality Gap:          {gap:.4f}%")
+        print(f"Total solve time:        {solve_time:.4f} seconds")
+        print("="*40 + "\n")
+        return z, dual_bound, x, y, solve_time
+    else:
+        print(f"\nOptimization failed or found no solution/bounds for n={n_points} using {solver_name}.")
+        return None, None, None, None, solve_time
+
+
+# --------------------------------------------------------------------------
+# Main Loop Execution
+# --------------------------------------------------------------------------
+if __name__ == "__main__":
+    result = {'scip': [], 'couenne': [], 'baron': []}
+
+    for i in range(3, 8):
+        print(f'\n-------------------- n = {i} --------------------')
+
+        # Run SCIP
+        z, dual_bound, x, y, solve_time = solve_with_models(i, 'scip')
+        result['scip'].append({i: {"objective": z, "dual_bound": dual_bound, "x": x, "y": y, "time": solve_time}})
+
+        # Run Couenne
+        z, dual_bound, x, y, solve_time = solve_with_models(i, 'couenne')
+        result['couenne'].append({i: {"objective": z, "dual_bound": dual_bound, "x": x, "y": y, "time": solve_time}})
+
+    print('\n-------------------- BARON, n = 7 --------------------')
+    z, dual_bound, x, y, solve_time = solve_with_models(7, 'baron')
+    result['baron'].append({7: {"objective": z, "dual_bound": dual_bound, "x": x, "y": y, "time": solve_time}})
+
+    print("\nFINAL RESULTS DICTIONARY:")
+    print(json.dumps(result, indent=2)) # Print nicely formatted dictionary
+
+    output_filename = "heilbronn_results_SCIP_COUENNE_BARON.json"
+    with open(output_filename, "w") as f:
+        json.dump(result, f, indent=4)
+    
+    print(f"\nResults successfully saved to {output_filename}")

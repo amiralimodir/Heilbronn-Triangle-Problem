@@ -1,0 +1,45 @@
+{
+  "n": 10,
+  "status": "OPTIMAL_WITHIN_TOLERANCE",
+  "solver_objective_printed": "4.653779398280e-02",
+  "solver_dual_bound_printed": "4.653779398280e-02",
+  "gap_percent_printed": "0.0000",
+  "elapsed_seconds": "5495.305539369583",
+  "x": [
+    "0.2528484104030566",
+    "0.842027824547611",
+    "1.0",
+    "0.0",
+    "0.3159477661329917",
+    "0.6840546661214518",
+    "1.0",
+    "0.0",
+    "0.7471556796764633",
+    "0.15797239451151235"
+  ],
+  "y": [
+    "0.0",
+    "0.0",
+    "0.157973314516413",
+    "0.25284439882593274",
+    "0.3159450521915368",
+    "0.6840529488260134",
+    "0.7471521488184872",
+    "0.8420281658604206",
+    "1.0",
+    "1.0"
+  ],
+  "input_lower_bound": null,
+  "input_upper_bound": null,
+  "solver_version": null,
+  "settings_from_supplied_source": {
+    "TimeLimit": 86000,
+    "MIPGap": 1e-06,
+    "MIPGapAbs": 0.0,
+    "Symmetry": 2
+  },
+  "source_sha256": "a3f55294ad06eb17dc7f8c978c68a54595282a96a5a2f2dd0e8301b051ade5cb",
+  "source_kind": "Saved console excerpt; not a complete solver log.",
+  "dual_bound_scope": "implemented_restricted_model",
+  "not_produced_by": "04_final_results/final_results.py selected 86400-second recipe"
+}
