@@ -614,18 +614,80 @@ def acquire_run_lock(package_dir):
     return handle
 
 
+
+def run_batch(args, selections, source_path):
+    """Run each model sequentially in a fresh process; keep model globals isolated."""
+    import csv
+    import subprocess
+    import uuid
+    package_dir = source_path.parent
+    batch_dir = package_dir / 'results' / ('batch_' + datetime.now().strftime('%Y%m%d_%H%M%S_%f') + '_' + uuid.uuid4().hex[:8])
+    if not args.check:
+        batch_dir.mkdir(parents=True, exist_ok=False)
+    rows = []
+    for selection in selections:
+        run_id = selection['experiment_id']
+        command = [sys.executable, str(source_path), '--n', str(selection['n'])]
+        if 'groups' in selection:
+            command += ['--groups', selection['groups']]
+        if args.check:
+            command.append('--check')
+        else:
+            command += ['--output-dir', str(batch_dir / run_id)]
+        if args.build_only:
+            command.append('--build-only')
+        print('Running ' + run_id, flush=True)
+        completed = subprocess.run(command, check=False)
+        if args.check:
+            if completed.returncode:
+                return completed.returncode
+            continue
+        result_file = batch_dir / run_id / 'result.json'
+        result = json.loads(result_file.read_text(encoding='utf-8')) if result_file.exists() else {}
+        rows.append({
+            'experiment_id': run_id, 'n': selection['n'],
+            'groups': selection.get('groups', '123'),
+            'status': result.get('status', 'ERROR'),
+            'dual_bound': result.get('ObjBound'),
+            'solver_runtime_seconds': result.get('solver_runtime_seconds'),
+            'configuration_minimum_area': result.get('minimum_area_exact_decimal'),
+            'exit_code': completed.returncode, 'result_file': str(result_file)
+        })
+        (batch_dir / 'summary.json').write_text(json.dumps(rows, indent=2, allow_nan=False), encoding='utf-8')
+        with (batch_dir / 'summary.csv').open('w', newline='', encoding='utf-8') as stream:
+            writer = csv.DictWriter(stream, fieldnames=list(rows[0]))
+            writer.writeheader()
+            writer.writerows(rows)
+        if completed.returncode:
+            print('Run failed; details are in ' + str(batch_dir), file=sys.stderr)
+            return completed.returncode
+    if not args.check:
+        print('Batch results: ' + str(batch_dir))
+    return 0
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Final Approach 1: groups 1--3; n=3,...,12.')
-    parser.add_argument('--n', type=int, choices=range(3,13), required=True,
-                        help='Number of points; one instance per invocation.')
+    parser.add_argument('--n', nargs='+', type=int, choices=range(3,13), default=list(range(3,13)),
+                        help='Point counts; by default run every n from 3 through 12 sequentially.')
     parser.add_argument('--build-only', action='store_true',
                         help='Build/export the model without optimizing (requires Gurobi).')
     parser.add_argument('--check', action='store_true',
                         help='Validate bounds/settings without importing Gurobi or optimizing.')
+    parser.add_argument('--list', action='store_true', help='List selected experiments without running them.')
+    parser.add_argument('--output-dir', type=Path, help=argparse.SUPPRESS)
     args = parser.parse_args()
-
-    n = args.n
+    selections = [{'n': value, 'experiment_id': 'final_n{}_approach1'.format(value)}
+                  for value in dict.fromkeys(args.n)]
+    if args.list:
+        print(json.dumps(selections, indent=2))
+        raise SystemExit(0)
+    if len(selections) > 1:
+        if args.output_dir:
+            parser.error('--output-dir is for one experiment only.')
+        raise SystemExit(run_batch(args, selections, Path(__file__).resolve()))
+    n = selections[0]['n']
     EXPERIMENT_ID = 'final_n{}_approach1'.format(n)
     experiment_kind = 'final_results'
     approach = 1
@@ -751,7 +813,7 @@ if __name__ == '__main__':
     from gurobipy import Model, quicksum, GRB
 
     run_lock = acquire_run_lock(package_dir)
-    output_dir = package_dir / 'results' / (EXPERIMENT_ID + '_' + datetime.now().strftime('%Y%m%d_%H%M%S_%f'))
+    output_dir = args.output_dir.resolve() if args.output_dir else package_dir / 'results' / (EXPERIMENT_ID + '_' + datetime.now().strftime('%Y%m%d_%H%M%S_%f'))
     output_dir.mkdir(parents=True, exist_ok=False)
     result = []
     run_started_timer = time.perf_counter()

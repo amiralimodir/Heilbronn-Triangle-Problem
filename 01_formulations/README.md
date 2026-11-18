@@ -1,37 +1,63 @@
-# Formulations
+# Formulation comparison
 
-Run the complete interactive model file:
+`formulations.py` runs both formulation-comparison tables from one file:
+
+| Suite | Cases | Model settings |
+|---|---|---|
+| `baseline` | Approaches 1, 2, 3 for n=3,...,7: 15 runs | No geometric enhancements; objective bounds 0 and 0.5; default Gurobi stopping gaps |
+| `shared` | Approaches 1 and 3 for n=7,8: 4 runs | The shared geometric subset described below |
+
+The default is all 19 runs, each with TimeLimit=86400 seconds. Approach 3 uses
+the MILP relaxation with P=10. Install `requirements-comparison.txt` and a
+Gurobi license before solving.
+Approach 2 retains its original `z >= 1e-10` non-collinearity constraint;
+this effective lower limit is recorded separately from the zero input bound.
 
 ```console
+python 01_formulations/formulations.py --list
 python 01_formulations/formulations.py
+python 01_formulations/formulations.py --suite baseline
+python 01_formulations/formulations.py --suite shared
+python 01_formulations/formulations.py --suite baseline --n 7 --approaches 1 3
 ```
 
-Enter the point count, upper bound, lower bound, and approach number. Approach 3
-also asks for the expansion depth `H` (called `P` in the paper) and `MILP` or
-`MIQCP`. The selection calls the corresponding model function.
+`--list` and `--help` do not require Gurobi and do not solve anything.
+Use `--output PATH` to choose the results directory.
 
-For the n=7,8 Approach-1/Approach-3 comparison:
+## Shared comparison
 
-| Input | Value |
-|---|---|
-| n | 7 or 8 |
-| UB | 0.5 |
-| LB entered | 0 |
-| Approach | 1 or 3 |
-| Approach-3 depth | 10 |
-| Approach-3 model | MILP |
+Both approaches impose ordered y coordinates, y1=y2=0, yn=1, the n-specific
+y bounds, and monotonicity of the product variables. UB=0.5 and the entered
+LB=0 becomes `log(n)/n**2`. Approach 1 also sets the objective lower bound to
+this value; Approach 3 MILP uses it in its signed-area constraints.
 
-In this file, entering LB=0 changes it to `log(n)/n**2`. Approach 1 uses
-TimeLimit=86400, MIPGap=1e-6, and MIPGapAbs=0. Approach 3 MILP uses the same
-time limit with Gurobi's default gap settings. These settings are part of the
-comparison and should not be replaced by the final-run profile.
+Approach 1 uses MIPGap=1e-6 and MIPGapAbs=0. Approach 3 uses the default gaps,
+including MIPGap=1e-4. These are the settings of the shared comparison, not
+the final-run profile.
 
-The Approach-2 and exact-MIQCP functions have no explicit time limit. The
-horizontal-strip function in this comparison does not force point assignments;
-use the dedicated enhancement-comparison script for the complete G4 model.
+The shared implementation retains the submitted comparison's horizontal-strip
+capacity and linking rows. Without point-assignment equalities, these rows
+allow every assignment binary to be zero and impose no packing restriction.
+They are not the corrected G4 experiment. The corrected G4 implementation is
+in [the enhancement comparison](../03_enhancement_comparison/README.md).
 
-Console output reports the computed solution, and the figure is written in the
-working directory. Run each case from a separate directory to retain its files.
-An Approach-3 MILP incumbent is a relaxation value; recompute the actual minimum
-triangle area from its coordinates before interpreting it as a feasible bound.
+## Outputs and optional runs
+
+Each run gets its own directory containing `run_config.json`, `solver.log`,
+`model.mps`, `parameters.prm`, `result.json`, and, when available, `solution.sol`.
+The batch's `table_results.csv` collects dual bounds, times, statuses, and
+configuration values. Dual bounds and termination statuses are recorded even
+if no incumbent is found. Coordinates are stored as x/y arrays for independent
+verification. Missing or nonfinite solver bounds are written as JSON null.
+
+For Approach 3, the incumbent of the MILP relaxation need not equal the minimum
+triangle area of its coordinates. `recomputed_minimum_area` is a separate
+floating-point evaluation; use the area-verification script for exact decimal
+coordinate evaluation.
+
+`--approach3-mode miqcp` selects the exact version of Approach 3, and `--p`
+changes the expansion depth. These optional variants are marked in the run
+configuration and are not the MILP P=10 entries in the paper tables.
+`--time-limit` can be used for a shorter exploratory run. All three formulations
+receive the selected time limit, including Approach 2 and exact Approach 3.
 

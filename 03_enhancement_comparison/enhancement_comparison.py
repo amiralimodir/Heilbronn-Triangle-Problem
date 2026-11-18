@@ -538,17 +538,82 @@ def acquire_run_lock(package_dir):
 
 
 
+
+def run_batch(args, selections, source_path):
+    """Run each model sequentially in a fresh process; keep model globals isolated."""
+    import csv
+    import subprocess
+    import uuid
+    package_dir = source_path.parent
+    batch_dir = package_dir / 'results' / ('batch_' + datetime.now().strftime('%Y%m%d_%H%M%S_%f') + '_' + uuid.uuid4().hex[:8])
+    if not args.check:
+        batch_dir.mkdir(parents=True, exist_ok=False)
+    rows = []
+    for selection in selections:
+        run_id = selection['experiment_id']
+        command = [sys.executable, str(source_path), '--n', str(selection['n'])]
+        if 'groups' in selection:
+            command += ['--groups', selection['groups']]
+        if args.check:
+            command.append('--check')
+        else:
+            command += ['--output-dir', str(batch_dir / run_id)]
+        if args.build_only:
+            command.append('--build-only')
+        print('Running ' + run_id, flush=True)
+        completed = subprocess.run(command, check=False)
+        if args.check:
+            if completed.returncode:
+                return completed.returncode
+            continue
+        result_file = batch_dir / run_id / 'result.json'
+        result = json.loads(result_file.read_text(encoding='utf-8')) if result_file.exists() else {}
+        rows.append({
+            'experiment_id': run_id, 'n': selection['n'],
+            'groups': selection.get('groups', '123'),
+            'status': result.get('status', 'ERROR'),
+            'dual_bound': result.get('ObjBound'),
+            'solver_runtime_seconds': result.get('solver_runtime_seconds'),
+            'configuration_minimum_area': result.get('minimum_area_exact_decimal'),
+            'exit_code': completed.returncode, 'result_file': str(result_file)
+        })
+        (batch_dir / 'summary.json').write_text(json.dumps(rows, indent=2, allow_nan=False), encoding='utf-8')
+        with (batch_dir / 'summary.csv').open('w', newline='', encoding='utf-8') as stream:
+            writer = csv.DictWriter(stream, fieldnames=list(rows[0]))
+            writer.writeheader()
+            writer.writerows(rows)
+        if completed.returncode:
+            print('Run failed; details are in ' + str(batch_dir), file=sys.stderr)
+            return completed.returncode
+    if not args.check:
+        print('Batch results: ' + str(batch_dir))
+    return 0
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
-        description='Run one original-protocol four-group enhancement comparison.',
+        description='Run the complete four-group comparison (48 cases) or selected cases.',
         allow_abbrev=False)
-    parser.add_argument('--n', type=int, choices=(7, 8, 9), required=True)
-    parser.add_argument('--groups', choices=['none', '1', '2', '3', '4', '12', '13', '14', '23', '24', '34', '123', '124', '134', '234', '1234'], required=True,
+    parser.add_argument('--n', nargs='+', type=int, choices=(7, 8, 9), default=[7, 8, 9])
+    parser.add_argument('--groups', nargs='+', choices=['none', '1', '2', '3', '4', '12', '13', '14', '23', '24', '34', '123', '124', '134', '234', '1234'], default=['none', '1', '2', '3', '4', '12', '13', '14', '23', '24', '34', '123', '124', '134', '234', '1234'],
                         help='Use none, 1, 12, 1234, etc.; each digit enables a group.')
     parser.add_argument('--build-only', action='store_true',
                         help='Build/export the model without optimizing.')
+    parser.add_argument('--check', action='store_true', help='Validate selected inputs/settings without loading Gurobi.')
+    parser.add_argument('--list', action='store_true', help='List selected experiments without running them.')
+    parser.add_argument('--output-dir', type=Path, help=argparse.SUPPRESS)
     args = parser.parse_args()
-    n = args.n
+    selections = [{'n': value, 'groups': groups, 'experiment_id': 'groups_n{}_G{}'.format(value, groups)}
+                  for value in dict.fromkeys(args.n) for groups in dict.fromkeys(args.groups)]
+    if args.list:
+        print(json.dumps(selections, indent=2))
+        raise SystemExit(0)
+    if len(selections) > 1:
+        if args.output_dir:
+            parser.error('--output-dir is for one experiment only.')
+        raise SystemExit(run_batch(args, selections, Path(__file__).resolve()))
+    args.groups = selections[0]['groups']
+    n = selections[0]['n']
     ACTIVE_GROUPS = [] if args.groups == 'none' else [int(value) for value in args.groups]
     EXPERIMENT_ID = 'groups_n' + str(n) + '_G' + args.groups
     experiment_kind = 'four_group_comparison'
@@ -621,11 +686,20 @@ if __name__ == '__main__':
         raise ValueError('The geometric lower bound must exceed 1e-6 for the chosen square grid.')
     M = math.ceil(1.0/(2*lb-1e-6)) if use_group4 else 0
     M2 = math.ceil(1.0/(lb-1e-6)) if use_group4 else 0
+    if args.check:
+        print(json.dumps({
+            'experiment_id': EXPERIMENT_ID, 'n': n, 'groups': ACTIVE_GROUPS,
+            'objective_lower_bound': objective_lb, 'objective_upper_bound': ub,
+            'geometry_lower_bound': geometry_lb,
+            'features': {name: globals()[name] for name in FEATURE_NAMES},
+            'requested_parameters': solver_settings, 'validation_only': True
+        }, indent=2, allow_nan=False))
+        raise SystemExit(0)
     import gurobipy as gp
     from gurobipy import Model, quicksum, GRB
 
     run_lock = acquire_run_lock(package_dir)
-    output_dir = package_dir / 'results' / (EXPERIMENT_ID + '_' + datetime.now().strftime('%Y%m%d_%H%M%S_%f'))
+    output_dir = args.output_dir.resolve() if args.output_dir else package_dir / 'results' / (EXPERIMENT_ID + '_' + datetime.now().strftime('%Y%m%d_%H%M%S_%f'))
     output_dir.mkdir(parents=True, exist_ok=False)
     result = []
     run_started_timer = time.perf_counter()

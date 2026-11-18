@@ -39,24 +39,24 @@
     "lower_bound": 0.0257246,
     "upper_bound": 0.0723764,
     "upper_bound_reference_n": 8,
-    "upper_bound_source": "Established H8*=(sqrt(13)-1)/36=0.072376424... rounded upwards; monotonicity."
+    "upper_bound_source": "Author-supplied numerical cap for this run. The value 0.0723764 is not an upward rounding of H8*=(sqrt(13)-1)/36; no such rounding certificate is claimed."
   },
   "10": {
     "lower_bound": 0.0229178,
     "upper_bound": 0.0548767,
     "upper_bound_reference_n": 9,
-    "upper_bound_source": "Published H9*<0.054878314 (Chen/Xu/Zeng 2017), rounded upwards; monotonicity."
+    "upper_bound_source": "Author-supplied numerical cap for this run. It is smaller than the previously cited 0.054878314 bound, so that citation alone does not certify this cap."
   },
   "11": {
     "lower_bound": 0.0232757,
     "upper_bound": 0.0465387,
     "upper_bound_reference_n": "10 not proven",
-    "upper_bound_source": "Conservative bound on H10* inherited from published H9*<0.054878314; not a restricted n10 solver bound."
+    "upper_bound_source": "Author-supplied numerical cap with reference n=10 marked not proven. No unrestricted upper-bound certificate is included; a restricted predecessor bound alone does not provide one."
   },
   "12": {
     "lower_bound": 0.0248156,
     "upper_bound": 0.0370378,
     "upper_bound_reference_n": "11 not proven",
-    "upper_bound_source": "Conservative bound on H11* inherited from published H9*<0.054878314; not a restricted n11 solver bound."
+    "upper_bound_source": "Author-supplied numerical cap with reference n=11 marked not proven. No unrestricted upper-bound certificate is included; a restricted predecessor bound alone does not provide one."
   }
 }

@@ -1,9 +1,14 @@
 # Enhancement-group comparison
 
-One complete model file supports n=7,8,9 and all 16 group combinations:
+The default command runs all 16 group combinations for n=7,8,9 sequentially
+(48 runs). Filters select a subset:
 
 ```console
+python 03_enhancement_comparison/enhancement_comparison.py --list
+python 03_enhancement_comparison/enhancement_comparison.py --check
+python 03_enhancement_comparison/enhancement_comparison.py
 python 03_enhancement_comparison/enhancement_comparison.py --n 9 --groups 123
+python 03_enhancement_comparison/enhancement_comparison.py --n 7 8 --groups none 1 2 12
 python 03_enhancement_comparison/enhancement_comparison.py --n 7 --groups 1234 --build-only
 ```
 
@@ -41,5 +46,8 @@ Each run creates a directory under `results/` containing its inputs, parameters,
 model, log, status, primal/dual bounds, gap, solution, and exact coordinate-area
 recomputation. `--build-only` exports the model without optimization.
 For timing comparisons, run sequentially with the same hardware and software.
-The complete result collection is still being finalized.
+Batch runs also save `summary.csv` and `summary.json`, with the dual bound,
+solver runtime, configuration area, and result path for each completed case.
+They stop if a case fails; completed results remain saved.
+`--list` and `--check` do not require Gurobi and do not optimize.
 

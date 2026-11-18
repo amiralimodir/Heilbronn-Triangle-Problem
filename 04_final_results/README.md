@@ -1,16 +1,21 @@
 # Final runs
 
 `final_results.py` contains the full Approach-1 model for n=3…12.
-G1–G3 are enabled; G4 is disabled.
+G1–G3 are enabled; G4 is disabled. With no filters, all ten instances run
+sequentially, each with its own one-day solver limit.
 
-1. Enter a verified feasible `lower_bound` for each intended n in
-   `bounds_by_n.json`. A null entry must be filled before running.
+1. Review the supplied `lower_bound` for each intended n in
+   `bounds_by_n.json`; these are the author's chosen run inputs.
 2. Check the upper bound and its source in the same file.
 3. Validate and launch the selected instance:
 
 ```console
+python 04_final_results/final_results.py --list
+python 04_final_results/final_results.py --check
+python 04_final_results/final_results.py
 python 04_final_results/final_results.py --n 9 --check
 python 04_final_results/final_results.py --n 9
+python 04_final_results/final_results.py --n 10 11 12
 ```
 
 `--check` validates inputs without loading Gurobi. `--build-only` constructs and
@@ -37,6 +42,15 @@ feasible lower bounds for the unrestricted problem.
 Each run writes a separate `results/` directory with configuration, source,
 model, parameter, log, solution, environment, status, objective, dual bound,
 gap, and exact minimum-area outputs. Runtime and total elapsed time are recorded
-separately. The selected profile is for these runs; existing numerical results
+separately. Batches additionally save `summary.csv` and `summary.json` with a
+row for each completed instance, and stop on a failed case without discarding
+earlier outputs. The selected profile is for these runs; existing numerical results
 must retain the input and parameter settings under which they were obtained.
+
+`--check` checks the format and range of the supplied bounds; it does not prove
+their mathematical validity. Upper-bound inputs are used exactly as supplied.
+The n=9,...,12 entries identify the author's numerical caps without attributing
+them to an inapplicable rounding or literature argument. A bound obtained for a
+restricted predecessor model is not, by itself, an upper bound for the
+unrestricted next instance.
 

@@ -37,7 +37,15 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Run the fixed nine-point Proposition-5 Case-B recipe; no explicit time limit.",
         allow_abbrev=False)
-    parser.parse_args()
+    parser.add_argument('--check', action='store_true',
+                        help='Show the fixed Case-B inputs without importing Gurobi or optimizing.')
+    args = parser.parse_args()
+    if args.check:
+        print(json.dumps({'n': 9, 'case': 'B', 'lower_bound': 0,
+                          'upper_bound': 0.0723767, 'epsilon': 0.01,
+                          'MIPGap': 1e-6, 'MIPGapAbs': 0, 'Symmetry': 2,
+                          'TimeLimit': 'solver default', 'Threads': 'solver default'}, indent=2))
+        raise SystemExit(0)
     import gurobipy as gp
     from gurobipy import Model,quicksum,GRB
     import matplotlib.pyplot as plt

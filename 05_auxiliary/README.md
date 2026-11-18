@@ -4,6 +4,7 @@ The available main file runs the nine-point complementary Case B for
 Proposition 5:
 
 ```console
+python 05_auxiliary/proposition5_case_b.py --check
 python 05_auxiliary/proposition5_case_b.py
 ```
 
@@ -25,6 +26,10 @@ Each run exports its model, parameters, solver log, versions, status, objective,
 dual bound, gap, solution, and available plot into `05_auxiliary/runs/`.
 Use an ASCII-only path for these outputs. `--help` and importing the file do
 not start optimization.
+
+Case A is the n=9 instance of `04_final_results/final_results.py`. Its saved
+coordinates supply the independently evaluated configuration value; this
+file supplies the complementary Case-B solver bound.
 
 The reported reference run has objective/bound approximately
 0.05463409383500306 and elapsed time 6576.674431800842 seconds. Its complete

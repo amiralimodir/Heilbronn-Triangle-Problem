@@ -1,38 +1,49 @@
-"""Solver comparison: SCIP, Couenne, and BARON with the same Pyomo model.
+"""Complete solver-comparison table: four solvers, n=3,...,7.
 
-LB=0, UB=0.5, time limit=86400. With no arguments, run the six cases whose
-dual bounds remain pending. Use --all for the complete comparison schedule.
-Edit the executable paths and RUNS_TO_REPEAT below when needed.
+LB=0, UB=0.5, requested time limit=86400; no enhancement groups.
+Gurobi uses the native Approach-1 model; the other solvers retain the supplied
+Pyomo model. See README.md for the formulation and timing distinctions.
 """
 
 import argparse
 
-# Edit this list to select only the cases you need.
-RUNS_TO_REPEAT = [
+SOLVERS = ("gurobi", "baron", "scip", "couenne")
+PENDING_DUAL_RUNS = [
     ("couenne", 3), ("couenne", 4), ("couenne", 5),
     ("couenne", 6), ("couenne", 7), ("scip", 7),
 ]
-ALL_RUNS = [(solver, n) for solver in ("scip", "couenne")
-            for n in range(3, 8)] + [("baron", 7)]
+ALL_RUNS = [(solver, n) for n in range(3, 8) for solver in SOLVERS]
+
+
+def select_runs(args):
+    selected = PENDING_DUAL_RUNS if args.missing_duals else ALL_RUNS
+    return [(solver, n) for solver, n in selected
+            if solver in args.solvers and n in args.n]
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Compare solvers; default: pending cases. Use --all for the full schedule.",
+        description="Run all 20 solver-table cases by default, or select a subset.",
         allow_abbrev=False)
-    parser.add_argument("--all", action="store_true", help="Run SCIP/Couenne n=3..7 and BARON n=7.")
+    schedule = parser.add_mutually_exclusive_group()
+    schedule.add_argument("--all", action="store_true", help="Run the full table (the default).")
+    schedule.add_argument("--missing-duals", action="store_true",
+                          help="Select only Couenne n=3..7 and SCIP n=7.")
+    parser.add_argument("--solvers", nargs="+", choices=SOLVERS, default=list(SOLVERS))
+    parser.add_argument("--n", nargs="+", type=int, choices=range(3, 8), default=list(range(3, 8)))
+    parser.add_argument("--output", help="Writable ASCII-only output folder.")
+    parser.add_argument("--stop-on-error", action="store_true",
+                        help="Stop after a failed solve or missing dual bound; otherwise continue.")
     parser.add_argument("--list", action="store_true", help="Print selected cases without loading solvers.")
     CLI_ARGS = parser.parse_args()
     if CLI_ARGS.list:
-        cases = ALL_RUNS if CLI_ARGS.all else RUNS_TO_REPEAT
+        cases = select_runs(CLI_ARGS)
         for solver, points in cases:
             print(solver, points)
         raise SystemExit(0)
 
-import pyomo.environ as pyo
-from pyomo.opt import SolverFactory
-from pyomo.common.tempfiles import TempfileManager
 import time
 import json
+import csv
 import math
 import os
 import re
@@ -50,7 +61,6 @@ SCIP_EXECUTABLE = r"C:\Program Files\SCIPOptSuite 10.1.0\bin\scip.exe"
 COUENNE_EXECUTABLE = r"C:\Program Files\Couenne\ampl.mswin64\couenne.exe"
 BARON_EXECUTABLE = r"C:\baron\baron.exe"
 OUTPUT_ROOT = Path.home() / "heilbronn_solver_comparison"
-STOP_ON_MISSING_BOUND = True
 
 # These runs deliberately retain the supplied model, including the absence
 # of the extra sign-strengthening inequalities. LB=0 and UB=0.5 are unchanged.
@@ -213,12 +223,16 @@ def termination_label(results, log_text):
 
 def solve_heilbronn(n, ub, lb, solver_name):
     """Same supplied mathematical model; corrected output recovery."""
+    import pyomo.environ as pyo
+    from pyomo.opt import SolverFactory
+    from pyomo.common.tempfiles import TempfileManager
+
     global SESSION_DIR, LAST_RUN_DETAILS
     solver_name = solver_name.lower()
     if (lb, ub) != (0, 0.5):
-        raise ValueError("These comparison reruns are defined for LB=0 and UB=0.5.")
+        raise ValueError("The solver comparison is defined for LB=0 and UB=0.5.")
     if SESSION_DIR is None:
-        SESSION_DIR = OUTPUT_ROOT / datetime.now().strftime("rerun_%Y%m%d_%H%M%S_%f")
+        SESSION_DIR = OUTPUT_ROOT / datetime.now().strftime("comparison_%Y%m%d_%H%M%S_%f")
         SESSION_DIR.mkdir(parents=True, exist_ok=False)
     run_dir = SESSION_DIR / (solver_name + "_n" + str(n))
     run_dir.mkdir(parents=True, exist_ok=False)
@@ -232,7 +246,9 @@ def solve_heilbronn(n, ub, lb, solver_name):
         "time_limit": TIME_LIMIT, "run_directory": str(run_dir),
         "solver_log": str(log_path), "python_version": sys.version,
         "python_executable": sys.executable, "pyomo_version": package_version("pyomo"),
-        "model_variant": "original supplied Pyomo model; no added sign-strengthening inequalities",
+        "model_variant": "Pyomo Approach 1 without sign-strengthening inequalities",
+        "enhancement_groups": [],
+        "time_measure": "elapsed opt.solve call, including export and solution loading",
     }
     write_json(run_dir / "run_config.json", LAST_RUN_DETAILS)
 
@@ -291,6 +307,11 @@ def solve_heilbronn(n, ub, lb, solver_name):
         opt.options["MaxTime"] = TIME_LIMIT
     else:
         raise ValueError(f"Unknown solver: {solver_name}")
+
+    LAST_RUN_DETAILS["solver_options"] = dict(opt.options)
+    if solver_name == "couenne":
+        LAST_RUN_DETAILS["option_file"] = {"time_limit": TIME_LIMIT}
+    write_json(run_dir / "run_config.json", LAST_RUN_DETAILS)
 
     old_cwd = Path.cwd()
     old_tempdir = TempfileManager.tempdir
@@ -421,47 +442,190 @@ def solve_heilbronn(n, ub, lb, solver_name):
     return optimal_z, dual_bound, optimal_x, optimal_y, optimize_time
 
 
+def solve_gurobi(n, ub=0.5, lb=0):
+    """Native Approach 1, without enhancements; solver defaults plus TimeLimit."""
+    import gurobipy as gp
+    from gurobipy import GRB
+
+    global SESSION_DIR, LAST_RUN_DETAILS
+    if (lb, ub) != (0, 0.5):
+        raise ValueError("The solver comparison is defined for LB=0 and UB=0.5.")
+    if SESSION_DIR is None:
+        SESSION_DIR = OUTPUT_ROOT / datetime.now().strftime("comparison_%Y%m%d_%H%M%S_%f")
+        SESSION_DIR.mkdir(parents=True, exist_ok=False)
+    run_dir = (SESSION_DIR / ("gurobi_n" + str(n))).resolve()
+    run_dir.mkdir(parents=True, exist_ok=False)
+    if not str(run_dir).isascii():
+        raise RuntimeError("Set OUTPUT_ROOT to a writable path containing ASCII characters only.")
+    shutil.copyfile(str(SCRIPT_PATH), str(run_dir / "executed_source.py"))
+
+    model = gp.Model("Heilbronn Triangle")
+    x = model.addVars(n, vtype=GRB.CONTINUOUS, name="x", lb=0, ub=1)
+    y = model.addVars(n, vtype=GRB.CONTINUOUS, name="y", lb=0, ub=1)
+    w = model.addVars(n, n, vtype=GRB.CONTINUOUS, name="w", lb=0, ub=1)
+    S = model.addVars(n, n, n, vtype=GRB.CONTINUOUS, name="S", lb=-0.5, ub=0.5)
+    b = model.addVars(n, n, n, vtype=GRB.BINARY, name="b")
+    z = model.addVar(vtype=GRB.CONTINUOUS, name="z", lb=lb, ub=ub)
+    model.update()
+    for i in range(n):
+        for j in range(n):
+            model.addConstr(w[i, j] == x[i] * y[j])
+    for i in range(n):
+        for j in range(i + 1, n):
+            for k in range(j + 1, n):
+                model.addConstr(S[i, j, k] == 0.5 * (
+                    w[i, j] - w[i, k] + w[j, k] - w[j, i] + w[k, i] - w[k, j]),
+                    name=f"S_constr_{i}_{j}_{k}")
+                model.addConstr((1 - b[i, j, k]) * (ub + 0.5) + S[i, j, k] >= z,
+                                name=f"linearize1_{i}_{j}_{k}")
+                model.addConstr(b[i, j, k] * (ub + 0.5) - S[i, j, k] >= z,
+                                name=f"linearize2_{i}_{j}_{k}")
+                model.addConstr(-0.5 <= S[i, j, k] - (0.5 + lb) * b[i, j, k])
+                model.addConstr(S[i, j, k] - (0.5 + lb) * b[i, j, k] <= -lb)
+    model.setObjective(z, GRB.MAXIMIZE)
+    model.setParam("TimeLimit", TIME_LIMIT)
+    model.setParam("LogFile", str(run_dir / "solver.log"))
+    model.update()
+    model.write(str(run_dir / "model.mps"))
+    model.write(str(run_dir / "parameters.prm"))
+    settings = {name: model.getParamInfo(name)[2] for name in (
+        "TimeLimit", "MIPGap", "MIPGapAbs", "NonConvex", "Threads", "Seed",
+        "FeasibilityTol", "IntFeasTol", "OptimalityTol", "Symmetry")}
+    LAST_RUN_DETAILS = {
+        "solver": "gurobi", "n": n, "input_lb": lb, "input_ub": ub,
+        "time_limit": TIME_LIMIT, "run_directory": str(run_dir),
+        "solver_log": str(run_dir / "solver.log"), "python_version": sys.version,
+        "python_executable": sys.executable, "solver_version": list(gp.gurobi.version()),
+        "model_variant": "native Gurobi Approach 1 with sign-strengthening inequalities",
+        "enhancement_groups": [], "effective_parameters": settings,
+        "time_measure": "elapsed model.optimize call",
+    }
+    write_json(run_dir / "run_config.json", LAST_RUN_DETAILS)
+    solve_error = None
+    started = time.time()
+    try:
+        model.optimize()
+    except Exception as exc:
+        solve_error = repr(exc)
+    solve_time = time.time() - started
+    status_names = {
+        GRB.OPTIMAL: "OPTIMAL_WITHIN_SOLVER_TOLERANCES", GRB.TIME_LIMIT: "TIME_LIMIT",
+        GRB.INFEASIBLE: "INFEASIBLE", GRB.INF_OR_UNBD: "INFEASIBLE_OR_UNBOUNDED",
+        GRB.UNBOUNDED: "UNBOUNDED", GRB.INTERRUPTED: "INTERRUPTED",
+        GRB.NUMERIC: "NUMERIC", GRB.SUBOPTIMAL: "SUBOPTIMAL",
+    }
+    objective, dual_bound, x_values, y_values = None, None, None, None
+    try:
+        if model.SolCount > 0:
+            objective = finite_number(model.ObjVal)
+            x_values = [x[i].X for i in range(n)]
+            y_values = [y[i].X for i in range(n)]
+            model.write(str(run_dir / "solution.sol"))
+        if model.Status not in (GRB.INFEASIBLE, GRB.INF_OR_UNBD, GRB.UNBOUNDED):
+            dual_bound = finite_number(model.ObjBound)
+    except Exception as exc:
+        solve_error = solve_error or repr(exc)
+    LAST_RUN_DETAILS.update({
+        "objective": objective, "dual_bound": dual_bound,
+        "x": x_values, "y": y_values, "time": solve_time,
+        "solver_runtime": finite_number(model.Runtime),
+        "solver_status": model.Status,
+        "termination_status": status_names.get(model.Status, str(model.Status)),
+        "bound_source": "Gurobi ObjBound" if dual_bound is not None else None,
+        "bound_error": None if dual_bound is not None else "No finite ObjBound was available.",
+        "solve_error": solve_error,
+    })
+    write_json(run_dir / "result.json", LAST_RUN_DETAILS)
+    model.dispose()
+    print("GUROBI n=", n, "dual=", dual_bound, "time=", solve_time,
+          "status=", LAST_RUN_DETAILS["termination_status"])
+    return objective, dual_bound, x_values, y_values, solve_time
+
+
 def solve_with_models(n_points, solver_name):
-    # The original comparison input bounds are preserved exactly.
+    if solver_name == "gurobi":
+        return solve_gurobi(n_points, 0.5, 0)
     return solve_heilbronn(n_points, 0.5, 0, solver_name)
+
+
+def write_table(path, results):
+    """Table-ready dual bounds and recorded seconds; never substitute objectives."""
+    rows = []
+    for solver in SOLVERS:
+        for entry in results[solver]:
+            for n, record in entry.items():
+                rows.append({"n": int(n), "solver": solver,
+                             "dual_bound": record.get("dual_bound"),
+                             "time_seconds": record.get("time"),
+                             "termination_status": record.get("termination_status")})
+    rows.sort(key=lambda row: (row["n"], SOLVERS.index(row["solver"])))
+    with Path(path).open("w", newline="", encoding="utf-8") as stream:
+        writer = csv.DictWriter(stream, fieldnames=(
+            "n", "solver", "dual_bound", "time_seconds", "termination_status"))
+        writer.writeheader()
+        writer.writerows(rows)
 
 
 # --------------------------------------------------------------------------
 # Main Loop Execution
 # --------------------------------------------------------------------------
 if __name__ == "__main__":
-    if CLI_ARGS.all:
-        RUNS_TO_REPEAT = ALL_RUNS
+    selected_runs = select_runs(CLI_ARGS)
+    if not selected_runs:
+        raise SystemExit("No cases match the selected filters.")
+    if CLI_ARGS.output:
+        OUTPUT_ROOT = Path(CLI_ARGS.output).expanduser()
     if not str(OUTPUT_ROOT.resolve()).isascii():
         raise SystemExit("Please set OUTPUT_ROOT to an ASCII-only writable folder.")
-    if len(set(RUNS_TO_REPEAT)) != len(RUNS_TO_REPEAT):
-        raise SystemExit("RUNS_TO_REPEAT contains duplicate cases.")
-    for solver_name, n in RUNS_TO_REPEAT:
-        if solver_name not in ("couenne", "scip", "baron") or n not in range(3, 8):
-            raise SystemExit("Choose SCIP, Couenne, or BARON and n=3,...,7.")
+    for solver_name, n in selected_runs:
+        if solver_name == "gurobi":
+            try:
+                import gurobipy
+            except ImportError:
+                raise SystemExit("Install gurobipy before selecting Gurobi.")
+            continue
+        try:
+            import pyomo.environ
+        except ImportError:
+            raise SystemExit("Install Pyomo before selecting BARON, SCIP, or Couenne.")
         executable = {"couenne": COUENNE_EXECUTABLE, "scip": SCIP_EXECUTABLE, "baron": BARON_EXECUTABLE}[solver_name]
         if not Path(executable).is_file():
             raise SystemExit("Solver executable not found: " + executable)
 
     OUTPUT_ROOT.mkdir(parents=True, exist_ok=True)
-    SESSION_DIR = OUTPUT_ROOT / datetime.now().strftime("rerun_%Y%m%d_%H%M%S_%f")
+    SESSION_DIR = OUTPUT_ROOT / datetime.now().strftime("comparison_%Y%m%d_%H%M%S_%f")
     SESSION_DIR.mkdir(exist_ok=False)
     output_filename = SESSION_DIR / "solver_results.json"
-    result = {"scip": [], "couenne": [], "baron": []}
-    print("Only these cases will run:", RUNS_TO_REPEAT)
+    result = {solver: [] for solver in SOLVERS}
+    print("Selected cases:", selected_runs)
     print("Results will be saved after EVERY run to:", output_filename)
 
-    for solver_name, n in RUNS_TO_REPEAT:
+    for solver_name, n in selected_runs:
         print(f"\n-------------------- {solver_name.upper()}, n = {n} --------------------")
-        z, dual_bound, x, y, solve_time = solve_with_models(n, solver_name)
+        try:
+            z, dual_bound, x, y, solve_time = solve_with_models(n, solver_name)
+        except Exception as exc:
+            # Keep the rest of a long comparison batch runnable after one failure.
+            run_dir = SESSION_DIR / (solver_name + "_n" + str(n))
+            run_dir.mkdir(parents=True, exist_ok=True)
+            dual_bound = None
+            LAST_RUN_DETAILS = {
+                "solver": solver_name, "n": n, "dual_bound": None,
+                "objective": None, "x": None, "y": None, "time": None,
+                "termination_status": "ERROR", "solve_error": repr(exc),
+                "run_directory": str(run_dir),
+            }
+            write_json(run_dir / "result.json", LAST_RUN_DETAILS)
+            print("RUN ERROR:", repr(exc))
         # Keep the same solver -> list -> n -> record structure as the input code.
         result[solver_name].append({n: dict(LAST_RUN_DETAILS)})
         write_json(output_filename, result)
-        if STOP_ON_MISSING_BOUND and (dual_bound is None or LAST_RUN_DETAILS.get("solve_error")):
+        write_table(SESSION_DIR / "solver_table.csv", result)
+        if CLI_ARGS.stop_on_error and (dual_bound is None or LAST_RUN_DETAILS.get("solve_error")):
             raise SystemExit(
                 "Stopped before the next run because bound recovery or solve failed. "
                 "The completed output and raw solver files have been saved in: "
                 + LAST_RUN_DETAILS["run_directory"]
             )
 
-    print("\nAll selected reruns completed. Results:", output_filename)
+    print("\nAll selected cases attempted. Results:", output_filename)

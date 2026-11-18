@@ -1,23 +1,29 @@
-# Reproducibility checklist
+# Reproducing the experiments
 
 The numbered directories each provide one main model or validation file.
 Their READMEs identify inputs, solver settings, execution commands, and outputs.
 The comparison and final-run parameter files are intentionally separate.
 
-Available:
+| Paper experiment | Cases supplied by the code |
+|---|---|
+| Unenhanced formulation comparison | Approaches 1, 2, 3 (MILP, P=10), n=3…7 |
+| Shared-enhancement comparison | Approaches 1 and 3 (MILP, P=10), n=7,8 |
+| Solver comparison | Gurobi, BARON, SCIP, Couenne, n=3…7 |
+| Enhancement comparison | All 16 G1–G4 combinations, n=7,8,9 |
+| Final results | G1–G3, n=3…12 |
+| Proposition 5 | Case B; Case A uses the final n=9 script |
 
-- Complete procedural model scripts for the listed experiments.
-- Recorded comparison settings and selected final-run settings.
-- Available solver logs, models, solutions, and numerical results under `data/`.
-- Printed n=6…12 coordinates and an independent exact area verifier.
+Use `--list` to inspect the first four experiment selections. Their default
+commands cover the complete tables, and filters permit individual reruns.
+Their READMEs document model variants, settings, and generated summaries.
+The exact coordinate-area verifier accepts user-supplied files and saved run
+outputs. The repository does not require bundled numerical data.
 
-Still to be added:
-
-- The complete enhancement-comparison result collection.
-- Corrected Couenne n=3…7 and SCIP n=7 dual-bound results.
-- Final max-random and y-bound computation files.
-- Missing exact run inputs or complete logs for results currently represented
-  only by console summaries, including the main n=9 and Proposition-5 runs.
+The final max-random lower-bound and auxiliary y-bound computation sources
+are still to be supplied. Until then, the main models consume the specified
+bounds; they do not generate those inputs. Executable coverage does not imply
+that every numerical run has already finished or that every paper entry has
+been regenerated.
 
 Each reported result must retain its own settings, inputs, status, primal/dual
 bounds, gap, runtime, and solver version. Do not assign a different run's timing
