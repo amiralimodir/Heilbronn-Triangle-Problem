@@ -847,8 +847,8 @@ if __name__ == '__main__':
         'requested_parameters': solver_settings,
         'run_started_local': datetime.now().astimezone().isoformat(),
         'protocol_id': 'final_G123_all_constraints_2026-11-16',
-        'reference_gurobi_version': [11, 0, 3],
-        'matches_reference_gurobi_version': tuple(gp.gurobi.version()) == (11, 0, 3),
+        'reference_gurobi_version': [11, 0, 1],
+        'matches_reference_gurobi_version': tuple(gp.gurobi.version()) == (11, 0, 1),
         'zero_lb_policy': 'zero_is_used_unchanged',
         'solver_file_paths': 'ASCII_relative_filenames_in_run_output_directory'
     }

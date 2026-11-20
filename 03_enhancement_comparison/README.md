@@ -25,17 +25,20 @@ log/model export on Windows.
 | G4 | Horizontal strips, vertical strips, and square occupancy with mandatory assignments |
 
 Ordering is also activated when G2 or G3 requires it. With G1 off, objective
-bounds and signed-area floors use [0,0.5]. G3/G4 can still use the common lower
-bound geometrically. G4 requires a lower-bound input above 1e-6. Changing the
-input LB does not recompute the fixed G3 table.
+bounds and signed-area floors use [0,0.5]. G4 still uses the common positive
+lower bound to construct its partitions, and requires an input above 1e-6.
+G3 uses the fixed paper table independently of the initialization LB.
 
 `bounds_by_n.json` contains the recorded common comparison inputs:
 
 | n | LB | UB |
 |---|---:|---:|
-| 7 | 0.06661976335812875 | 0.125 |
-| 8 | 0.0499921020091318 | 0.08386 |
-| 9 | 0.02572465439694456 | 0.072377 |
+| 7 | 0.066619 | 0.125 |
+| 8 | 0.049992 | 0.083859 |
+| 9 | 0.025724 | 0.072377 |
+
+These are the actual run inputs reported in the manuscript, not rounded
+display versions of more precise inputs.
 
 `solver_settings.json` uses Gurobi 11.0.1, TimeLimit=86400, MIPGap=1e-4,
 MIPGapAbs=1e-10, Threads=0, Seed=0, NonConvex=-1, and the recorded default

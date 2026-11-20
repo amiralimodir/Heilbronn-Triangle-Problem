@@ -1,4 +1,4 @@
-# Selected new final-run reference environment; distinct from comparison runs.
-gurobipy==11.0.3
+# Final-results reference environment; solver parameters are stored separately.
+gurobipy==11.0.1
 matplotlib
 

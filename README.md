@@ -28,8 +28,8 @@ python -m pip install -r requirements-comparison.txt
 python -m pip install -r requirements-final.txt
 ```
 
-The comparison uses Gurobi 11.0.1; the selected final-run profile uses Gurobi
-11.0.3. The Pyomo comparison uses Pyomo 6.8.2, SCIP 10.1.0, Couenne 0.5.8,
+The formulation, solver, enhancement, and final-run experiments use Gurobi
+11.0.1. The Pyomo comparison uses Pyomo 6.8.2, SCIP 10.1.0, Couenne 0.5.8,
 and BARON 22.4.20. External solver executables and licenses must be installed
 separately. Each section's README explains its inputs and outputs.
 
@@ -54,7 +54,7 @@ python 04_final_results/final_results.py --n 9 --check
 python 04_final_results/final_results.py --n 9
 python 05_auxiliary/proposition5_case_b.py --check
 python 05_auxiliary/proposition5_case_b.py
-python 05_auxiliary/max_random.py --n 9 --trials 500000 --seed 12345
+python 05_auxiliary/max_random.py --n 9 --trials 1000000 --seed 12345
 ```
 
 The selected final-run LB/UB inputs are in
@@ -62,6 +62,11 @@ The selected final-run LB/UB inputs are in
 The comparison's recorded bounds and
 parameters are kept in its own directory; do not replace them with final-run
 settings.
+
+The shared Approach 1/3 comparison for n=7,8 uses LB=0, UB=0.5,
+MIPGap=1e-6, and MIPGapAbs=0 for both approaches. The enhancement comparison
+uses its separate six-decimal inputs and default-gap profile; these profiles
+are not replaced by the final-run settings.
 
 Final runs enable G1–G3 and disable G4. For n=10,11,12, the additional unproved
 restrictions are enabled; numerical dual bounds then concern those restricted

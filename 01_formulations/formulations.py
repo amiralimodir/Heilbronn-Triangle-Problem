@@ -45,9 +45,10 @@ def select_experiments(args):
                 if approach not in args.approaches:
                     continue
                 settings = {'TimeLimit': args.time_limit}
-                if suite == 'shared' and approach == 1:
+                if suite == 'shared':
                     settings.update({'MIPGap': 1e-6, 'MIPGapAbs': 0.0})
-                signed_lb = math.log(count)/count**2 if suite == 'shared' else 0.0
+                # Both tables use a genuine zero input bound; no automatic LB.
+                signed_lb = 0.0
                 objective_lb = (signed_lb if approach == 1 or
                                 (approach == 3 and args.approach3_mode == 'miqcp') else 0.0)
                 if approach == 2:
@@ -326,33 +327,6 @@ def sort_w(model,w,n):
         for j in range(2,n):
             model.addConstr(w[i,j-1] <= w[i,j])
 
-def two_point_each_rectangle(model,point_in_rectangle,y,lb,n):
-
-    grid_size = (2*lb) - 1e-6
-    grid_sum = 0
-    last_grid = 0
-    m=0
-
-    for i in range(50):
-        if grid_sum>=1:
-            grid_sum -= grid_size
-            last_grid = 1 - grid_sum
-            break
-        grid_sum += grid_size
-        m+=1
-    
-    for i in range(m):
-        model.addConstr(quicksum(point_in_rectangle[i, k] for k in range(n)) <= 2, f"rectangle_{i}_capacity")
-
-    for k in range(n):
-        for j in range(m):
-            if j != m-1:
-                model.addConstr(point_in_rectangle[j, k] * (y[k] - j * grid_size) >= 0, f"link_y_lb_{j}_{k}")
-                model.addConstr(point_in_rectangle[j, k] * (y[k] - (j + 1) * grid_size) <= 0, f"link_y_ub_{j}_{k}")
-            else:
-                model.addConstr(point_in_rectangle[j, k] * (y[k] - j * grid_size) >= 0, f"link_y_lb_{j}_{k}")
-                model.addConstr(point_in_rectangle[j, k] * (y[k] - (j * grid_size + last_grid)) <= 0, f"link_y_ub_{j}_{k}")
-
 def heilbronn_triangle_approach1(n,m,m2,ub,lb,suite,run_dir,config):
     model = gp.Model("Heilbronn Triangle")
     x = model.addVars(n, vtype=GRB.CONTINUOUS, name="x", lb=0, ub=1)
@@ -361,17 +335,12 @@ def heilbronn_triangle_approach1(n,m,m2,ub,lb,suite,run_dir,config):
     S = model.addVars(n, n, n, vtype=GRB.CONTINUOUS, name="S", lb=-0.5, ub=0.5)
     b = model.addVars(n, n, n, vtype=GRB.BINARY, name="b")
     z = model.addVar(vtype=GRB.CONTINUOUS, name="z", lb=0, ub=0.5)
-    if suite == 'shared':
-        point_in_rectangle_y = model.addVars(m, n, vtype=GRB.BINARY, name="point_in_rec_y")
     model.update()
     z.lb = lb
     z.ub = ub
     if suite == 'shared':
         sort_y(model,y,n)
         define_w(model,w,x,y,n)
-        # These rows match the shared-comparison implementation. Without
-        # assignment equalities they do not impose a packing restriction.
-        two_point_each_rectangle(model,point_in_rectangle_y,y,lb,n)
         y_bounds(model,y,n)
     else:
         for i in range(n):
@@ -430,9 +399,6 @@ def heilbronn_triangle_approach3_MILP(n,H,m,ub,lb,suite,run_dir,config):
     S = model.addVars(n, n, n, vtype=GRB.CONTINUOUS, name="S", lb=-0.5, ub=0.5)
     b = model.addVars(n, n, n, vtype=GRB.BINARY, name="b")
     z = model.addVar(vtype=GRB.CONTINUOUS, name="z", lb=0, ub=0.5)
-    if suite == 'shared':
-        point_in_rectangle = model.addVars(m, n, vtype=GRB.BINARY, name="point_in_rectangle")
-
     model.update()
 
     if suite == 'shared':
@@ -446,9 +412,6 @@ def heilbronn_triangle_approach3_MILP(n,H,m,ub,lb,suite,run_dir,config):
         for j in range(n):
             model.addConstr(w[i,j] == sum(2**(-h-1) * (phi[i,j,h]) for h in range(H))+ omega[i,j])
     
-    if suite == 'shared':
-        two_point_each_rectangle(model,point_in_rectangle,y,lb,n)
-
     for i in range(n):
         for j in range(i + 1, n):
             for k in range(j + 1, n):
@@ -577,8 +540,9 @@ def main(args,cases):
         ub=config['input_upper_bound']
         run_dir=output/('{}_n{}_approach{}{}'.format(suite,n,approach,'_'+args.approach3_mode if approach==3 else ''))
         run_dir.mkdir()
-        # Preserve the shared run's original grid allocation; baseline has no grid.
-        m=min(50,int(math.ceil(1/(2*lb-1e-6)))) if suite=='shared' else 0
+        # Neither comparison includes Group 4 packing constraints.
+        # Keep the procedural function signatures; their grid arguments are unused.
+        m=0
         try:
             if approach==1:
                 row=heilbronn_triangle_approach1(n,m,0,ub,lb,suite,run_dir,config)

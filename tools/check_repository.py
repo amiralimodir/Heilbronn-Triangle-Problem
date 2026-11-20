@@ -54,6 +54,7 @@ def main():
     assert groups["MIPGap"] == 1e-4 and groups["MIPGapAbs"] == 1e-10
     assert final["MIPGap"] == 1e-6 and final["MIPGapAbs"] == 0
     assert final["Threads"] == 32 and final["Symmetry"] == 2
+    assert "gurobipy==11.0.1" in (ROOT / "requirements-final.txt").read_text()
     # --list exits before solver imports, so verify full table coverage license-free.
     def listed(relative):
         return subprocess.check_output([sys.executable, str(ROOT / relative), "--list"],
@@ -66,6 +67,15 @@ def main():
                              for approach in ((1, 2, 3) if suite == "baseline" else (1, 3))}
     assert len(formulations) == 19
     assert {(r["suite"], r["n"], r["approach"]) for r in formulations} == expected_formulations
+    for case in formulations:
+        assert case["input_lower_bound"] == 0 and case["input_upper_bound"] == 0.5
+        assert case["effective_signed_area_lower_bound"] == 0
+        if case["suite"] == "shared":
+            assert case["effective_objective_lower_bound"] == 0
+            assert case["solver_parameters"] == {
+                "TimeLimit": 86400, "MIPGap": 1e-6, "MIPGapAbs": 0}
+        else:
+            assert case["solver_parameters"] == {"TimeLimit": 86400}
     solver_cases = [line.split() for line in listed("02_solver_comparison/solver_comparison.py").splitlines()
                     if line.strip()]
     assert len(solver_cases) == 20
@@ -77,20 +87,36 @@ def main():
     assert len(enhancement_cases) == 48
     assert {(r["n"], r["groups"]) for r in enhancement_cases} == {
         (n, group) for n in (7, 8, 9) for group in all_groups}
+    comparison_bounds = json.loads((ROOT / "03_enhancement_comparison/bounds_by_n.json").read_text())
+    for n, lo, hi in ((7, 0.066619, 0.125), (8, 0.049992, 0.083859), (9, 0.025724, 0.072377)):
+        assert comparison_bounds[str(n)]["lower_bound"] == lo
+        assert comparison_bounds[str(n)]["upper_bound"] == hi
     final_cases = json.loads(listed("04_final_results/final_results.py"))
     assert len(final_cases) == 10 and {r["n"] for r in final_cases} == set(range(3, 13))
+    final_source = ast.parse((ROOT / "04_final_results/final_results.py").read_text(encoding="utf-8"))
+    reference_versions = [ast.literal_eval(value)
+        for node in ast.walk(final_source) if isinstance(node, ast.Dict)
+        for key, value in zip(node.keys, node.values)
+        if isinstance(key, ast.Constant) and key.value == "reference_gurobi_version"]
+    assert reference_versions == [[11, 0, 1]]
     random_cases = json.loads(listed("05_auxiliary/max_random.py"))
     assert {r["n"] for r in random_cases} == set(range(3, 13))
+    assert all(r["trials"] == 1000000 for r in random_cases)
     random_spec = importlib.util.spec_from_file_location("max_random", ROOT / "05_auxiliary/max_random.py")
     random_module = importlib.util.module_from_spec(random_spec)
     random_spec.loader.exec_module(random_module)
     for n in range(3, 13):
-        points = random_module.sample_configuration(n, random.Random(12345 + n), 0.167718, 10000)
+        points = random_module.sample_configuration(n, random.Random(12345 + n))
         assert points is not None and len(points) == n
         verification = random_module.verify_configuration(points)
         assert verification["coordinates_in_unit_square"]
         from fractions import Fraction
         assert Fraction(verification["feasible_lower_bound_7dp"]) <= Fraction(verification["minimum_area_exact_fraction"])
+        # Uniform draws must retain close pairs; there is no distance rejection.
+        class RepeatedDraw:
+            def random(self):
+                return 0.25
+        assert random_module.sample_configuration(n, RepeatedDraw()) == [(0.25, 0.25)] * n
     rectangle_cases = [json.loads(line) for line in listed("05_auxiliary/heilbronn_in_rectangle.py").splitlines()]
     assert {(r["n"], r["M"]) for r in rectangle_cases} == {
         (n, m) for n in range(3, 10) for m in range(1, 8)}

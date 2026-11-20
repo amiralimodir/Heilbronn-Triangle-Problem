@@ -12,20 +12,16 @@ Three standalone procedural files provide the auxiliary computations.
 
 ```console
 python 05_auxiliary/max_random.py --list
-python 05_auxiliary/max_random.py --n 9 --trials 500000 --seed 12345
+python 05_auxiliary/max_random.py --n 9 --trials 1000000 --seed 12345
 python 05_auxiliary/max_random.py --n 3 4 5 6 7 8 9 10 11 12 --seed 12345
 ```
 
-With no filters, every n=3,...,12 is processed sequentially using 500,000
-attempted configurations per n. The sampling order is left, right, left,
-right, bottom, bottom, top, top, then exactly n-8 interior points when n>8.
-The distance rejection filter remains 0.167718; `--min-distance` changes it.
-An attempt limit prevents a rejection loop from running indefinitely.
-
-The supplied loop always appended two interior points. That made requested
-n=9,11,12 configurations contain ten points. This script keeps n fixed and
-generates exactly the requested number. It does not retroactively reproduce
-those incorrect point-count runs.
+With no filters, every n=3,...,12 is processed sequentially using 1,000,000
+independent configurations per n, as described in Section 3.1.1. Every trial
+draws exactly n points with independent uniform x and y coordinates in the
+unit square. No points are fixed to edges, and no minimum-distance or
+rejection filter is applied. The configuration with the largest recomputed
+minimum triangle area is retained. `--trials` changes the number of trials.
 
 Each instance uses seed `base_seed + n`. If `--seed` is omitted, the generated
 base seed is saved. Results go under `05_auxiliary/results/max_random/` unless
@@ -34,9 +30,9 @@ minimum triangle area, and a feasible lower bound rounded down to seven
 decimal places (`feasible_lower_bound_7dp`). The exact calculation uses the
 saved decimal coordinates. Batch summaries are updated after each instance.
 
-No solver or third-party package is needed. The boundary sampling and distance
-filter are heuristic choices; the saved feasible configuration supplies the
-lower bound. They do not prove optimality. To use a result, copy the selected
+No solver or third-party package is needed. The saved feasible configuration
+supplies the lower bound; random sampling does not prove optimality.
+To use a result, copy the selected
 lower-bound value into the appropriate experiment's input file. No bound file
 is overwritten automatically.
 
@@ -50,6 +46,9 @@ python 05_auxiliary/heilbronn_in_rectangle.py --n 3 4 5 6 7 8 9 --m 2 3 4 5 6 7 
 
 Here `--n` is the number of points in the auxiliary rectangle and `--m` is M
 in its dimensions 1 by 1/M. The default selection is n=3,...,9 and M=1,...,7.
+Larger inverse heights used in the coordinate-bound table, including
+10, 11, 14 and 16, must be included explicitly with `--m`. For example,
+`--m 2 3 4 5 6 7 10 11 14 16` covers those listed inverse heights.
 The objective bounds are
 zero and 1/(2M). No time limit is set unless `--time-limit` is supplied; solver
 settings otherwise use the installed Gurobi version's defaults.

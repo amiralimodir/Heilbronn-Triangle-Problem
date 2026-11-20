@@ -27,19 +27,17 @@ Use `--output PATH` to choose the results directory.
 ## Shared comparison
 
 Both approaches impose ordered y coordinates, y1=y2=0, yn=1, the n-specific
-y bounds, and monotonicity of the product variables. UB=0.5 and the entered
-LB=0 becomes `log(n)/n**2`. Approach 1 also sets the objective lower bound to
-this value; Approach 3 MILP uses it in its signed-area constraints.
+y bounds, and monotonicity of the product variables, with wi1=wi2=0.
+The objective bounds are LB=0 and UB=0.5 in both models. Zero remains zero;
+no automatic lower-bound formula is applied.
 
-Approach 1 uses MIPGap=1e-6 and MIPGapAbs=0. Approach 3 uses the default gaps,
-including MIPGap=1e-4. These are the settings of the shared comparison, not
-the final-run profile.
+Both approaches use MIPGap=1e-6 and MIPGapAbs=0, with a requested
+TimeLimit=86400 seconds and otherwise default Gurobi settings. These are
+the settings of the shared comparison, not the final-run profile.
 
-The shared implementation retains the submitted comparison's horizontal-strip
-capacity and linking rows. Without point-assignment equalities, these rows
-allow every assignment binary to be zero and impose no packing restriction.
-They are not the corrected G4 experiment. The corrected G4 implementation is
-in [the enhancement comparison](../03_enhancement_comparison/README.md).
+This selected subset does not include the rectangle or square packing
+constraints of Group 4. Group 4 is implemented in
+[the enhancement comparison](../03_enhancement_comparison/README.md).
 
 ## Outputs and optional runs
 

@@ -21,7 +21,7 @@ python 04_final_results/final_results.py --n 10 11 12
 `--check` validates inputs without loading Gurobi. `--build-only` constructs and
 exports the model without optimizing. A zero LB stays zero in this script.
 
-The reference solver is Gurobi 11.0.3. `solver_settings.json` specifies
+The reference solver is Gurobi 11.0.1. `solver_settings.json` specifies
 TimeLimit=86400, MIPGap=1e-6, MIPGapAbs=0, Threads=32, Seed=0, Symmetry=2,
 ConcurrentMIP=1, NonConvex=-1, FeasibilityTol=1e-6, IntFeasTol=1e-5, and
 OptimalityTol=1e-6.
@@ -35,9 +35,31 @@ OptimalityTol=1e-6.
 | 9 | Case A near-boundary restrictions with epsilon=0.01; fixed y-bounds |
 | 10,11,12 | Two selected points on each exact edge, bottom ordering, reflection, fixed/relative y-bounds, median-y restriction, edge-sign fixing, and left/right half-balance |
 
-The n=10…12 additional restrictions are unproved. Their dual bounds apply to the
-implemented restricted models. Verified coordinates in the square still provide
-feasible lower bounds for the unrestricted problem.
+For n=10…12, the combined additional restrictions have not been proved to
+preserve an unrestricted optimum. The dual bounds apply to the implemented
+restricted models. Verified coordinates in the square still provide feasible
+lower bounds for the unrestricted problem.
+
+For n=10,11,12, `y_bounds` applies the fixed table entries and the relative
+inequalities `y[i+r-1] - y[i] >= 1/kappa` for every `i=0,...,n-r`, using
+the following `(r,kappa)` pairs:
+
+| n | (r,kappa) |
+|---|---|
+| 10 | (3,11), (4,11), (5,5), (6,3), (7,2), (8,2) |
+| 11 | (3,14), (4,14), (5,6), (6,4), (7,3), (8,2) |
+| 12 | (3,16), (4,16), (5,6), (6,4), (7,3), (8,3), (9,2) |
+
+All code indices are zero-based. The extra median constraint is
+`y[n//2] >= 0.5`. The first two points have y=0 and the last two have y=1;
+two points are selected on each vertical edge. A corner can serve both a
+horizontal and a vertical edge, so these constraints do not require eight
+distinct boundary points. Bottom ordering is `x[0] <= x[1]` and reflection
+uses `x[0] <= 0.5`. Bottom and top triangle signs are fixed to one, with the
+top sign convention corresponding to `x[n-2] >= x[n-1]`. Half assignments
+are 5/5 for n=10, either 5/6 or 6/5 for n=11, and 6/6 for n=12; a point on
+x=0.5 is assigned to exactly one half. No coordinate-pair mirror symmetry
+is imposed.
 
 Each run writes a separate `results/` directory with configuration, source,
 model, parameter, log, solution, environment, status, objective, dual bound,
